@@ -15,7 +15,7 @@ module.exports = {
             chunkLoading: false,
         },
         upworker: {
-            import: "./js/crypt-post-upworker.js",
+            import: "./js/crypt-post-upworker1.js",
             filename: "./build/upworker-post.js",
             chunkLoading: false,
         },
