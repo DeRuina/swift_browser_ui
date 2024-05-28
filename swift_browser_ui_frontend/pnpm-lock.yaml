@@ -2,6 +2,7 @@ lockfileVersion: '9.0'
 
 settings:
   autoInstallPeers: false
+  autoInstallPeers: false
   excludeLinksFromLockfile: false
 
 importers:
@@ -4849,11 +4850,14 @@ snapshots:
         optional: true
     dependencies:
       ms: 2.1.2
+<<<<<<< HEAD
 
   debug@4.3.6(supports-color@8.1.1):
     dependencies:
       ms: 2.1.2
     optionalDependencies:
+=======
+>>>>>>> 81097964 ( defyining duplicate files to start encyption off)
       supports-color: 8.1.1
     dev: true
 <<<<<<< HEAD
@@ -4868,6 +4872,24 @@ snapshots:
     dev: true
 =======
 >>>>>>> 95b76354 ( defyining duplicate files to start encyption off)
+
+  /dedent@1.5.1:
+    resolution: {integrity: sha512-+LxW+KLWxu3HW3M2w2ympwtqPrqYRzU8fqi6Fhd18fBALe15blJPI/I4+UHveMVG6lJqB4JNd4UG0S5cnVHwIg==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
+    dev: true
+
+  /dedent@1.5.1:
+    resolution: {integrity: sha512-+LxW+KLWxu3HW3M2w2ympwtqPrqYRzU8fqi6Fhd18fBALe15blJPI/I4+UHveMVG6lJqB4JNd4UG0S5cnVHwIg==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
+    dev: true
 
   dedent@1.5.1: {}
 
