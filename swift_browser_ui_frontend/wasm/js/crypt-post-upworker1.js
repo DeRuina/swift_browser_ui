@@ -463,7 +463,7 @@ async function addFiles(files, container) {
     // createUploadSessionFile(container, path);
 
     let msg = {
-      command: "add_header",
+      command: "start_upload",
       container: container,
       object: path,
       name: uploads[container].projectName,
