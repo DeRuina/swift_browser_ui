@@ -84,77 +84,77 @@ function createUploadSession(container, receivers, projectName) {
 }
 
 
-// Add a file to the upload session
-function createUploadSessionFile(container, path) {
-  // We'll need an ephemeral keypair for the upload
-  let keypairPtr = Module.ccall(
-    "create_keypair",
-    "number",
-    [],
-    [],
-  );
-  // We'll also need a session key for encryption
-  let sessionKeyPtr = Module.ccall(
-    "create_session_key",
-    "number",
-    [],
-    [],
-  );
+// // Add a file to the upload session
+// function createUploadSessionFile(container, path) {
+//   // We'll need an ephemeral keypair for the upload
+//   let keypairPtr = Module.ccall(
+//     "create_keypair",
+//     "number",
+//     [],
+//     [],
+//   );
+//   // We'll also need a session key for encryption
+//   let sessionKeyPtr = Module.ccall(
+//     "create_session_key",
+//     "number",
+//     [],
+//     [],
+//   );
 
-  uploads[container].files[path].sessionkey = sessionKeyPtr;
+//   uploads[container].files[path].sessionkey = sessionKeyPtr;
 
-  // We won't need anything else besides the private key for the header build
-  let privateKeyPtr = Module.ccall(
-    "get_keypair_private_key",
-    "number",
-    ["number"],
-    [keypairPtr],
-  );
+//   // We won't need anything else besides the private key for the header build
+//   let privateKeyPtr = Module.ccall(
+//     "get_keypair_private_key",
+//     "number",
+//     ["number"],
+//     [keypairPtr],
+//   );
 
-  // Build the header using the keypair, session receivers and the file session key
-  let header = Module.ccall(
-    "create_crypt4gh_header",
-    "number",
-    ["number", "number", "number", "number"],
-    [
-      sessionKeyPtr,
-      privateKeyPtr,
-      uploads[container].receivers,
-      uploads[container].receiversLen,
-    ],
-  );
-  let headerPtr = Module.ccall(
-    "wrap_chunk_content",
-    "number",
-    ["number"],
-    [header],
-  );
-  let headerLen = Module.ccall(
-    "wrap_chunk_len",
-    "number",
-    ["number"],
-    [header],
-  );
+//   // Build the header using the keypair, session receivers and the file session key
+//   let header = Module.ccall(
+//     "create_crypt4gh_header",
+//     "number",
+//     ["number", "number", "number", "number"],
+//     [
+//       sessionKeyPtr,
+//       privateKeyPtr,
+//       uploads[container].receivers,
+//       uploads[container].receiversLen,
+//     ],
+//   );
+//   let headerPtr = Module.ccall(
+//     "wrap_chunk_content",
+//     "number",
+//     ["number"],
+//     [header],
+//   );
+//   let headerLen = Module.ccall(
+//     "wrap_chunk_len",
+//     "number",
+//     ["number"],
+//     [header],
+//   );
 
-  // Create a new array from view, as views get stale as memory gets managed
-  let headerView = new Uint8Array(HEAPU8.subarray(headerPtr, headerPtr + headerLen));
+//   // Create a new array from view, as views get stale as memory gets managed
+//   let headerView = new Uint8Array(HEAPU8.subarray(headerPtr, headerPtr + headerLen));
 
-  Module.ccall(
-    "free_chunk",
-    "number",
-    ["number"],
-    [header],
-  );
-  // The keypair is not needed for upload after this, so it can be ditched
-  Module.ccall(
-    "free_keypair",
-    undefined,
-    "number",
-    [keypairPtr],
-  );
+//   Module.ccall(
+//     "free_chunk",
+//     "number",
+//     ["number"],
+//     [header],
+//   );
+//   // The keypair is not needed for upload after this, so it can be ditched
+//   Module.ccall(
+//     "free_keypair",
+//     undefined,
+//     "number",
+//     [keypairPtr],
+//   );
 
-  uploads[container].files[path].header = headerView;
-}
+//   uploads[container].files[path].header = headerView;
+// }
 
 
 // Encrypt a single chunk of an upload
@@ -460,7 +460,7 @@ async function addFiles(files, container) {
     };
 
     // Create the file header
-    createUploadSessionFile(container, path);
+    // createUploadSessionFile(container, path);
 
     let msg = {
       command: "add_header",
@@ -468,7 +468,7 @@ async function addFiles(files, container) {
       object: path,
       name: uploads[container].projectName,
       total: totalBytes,
-      data: uploads[container].files[path].header,
+      // data: uploads[container].files[path].header,
     };
 
     if (uploads[container].owner !== "") {
