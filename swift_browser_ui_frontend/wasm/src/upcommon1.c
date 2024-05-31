@@ -154,18 +154,18 @@ uint8_t *wrap_chunk_content(CHUNK *chunk)
     return chunk->chunk;
 }
 
-/*
-Free chunk contents.
-*/
-void free_chunk(CHUNK *chunk)
-{
-    if (chunk->chunk)
-    {
-        free(chunk->chunk);
-    }
-    free(chunk);
-    return;
-}
+// /*
+// Free chunk contents.
+// */
+// void free_chunk(CHUNK *chunk)
+// {
+//     if (chunk->chunk)
+//     {
+//         free(chunk->chunk);
+//     }
+//     free(chunk);
+//     return;
+// }
 
 // /*
 // Free chunk with stack buffer
