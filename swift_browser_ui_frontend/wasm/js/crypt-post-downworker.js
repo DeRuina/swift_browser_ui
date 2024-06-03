@@ -332,11 +332,11 @@ async function addSessionFiles(
 ) {
   let undecryptable = false;
 
-  // for (const file in headers) {
-  //   if (!createDownloadSessionFile(id, container, file, headers[file].header, headers[file].url, headers[file].size)) {
-  //     undecryptable = true;
-  //   }
-  // }
+  for (const file in headers) {
+    if (!createDownloadSessionFile(id, container, file, headers[file].header, headers[file].url, headers[file].size)) {
+      undecryptable = true;
+    }
+  }
 
   return undecryptable;
 }
