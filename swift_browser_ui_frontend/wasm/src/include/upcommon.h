@@ -30,6 +30,20 @@ void free_keypair(KEYPAIR *kp);
 Return public key from the keypair.
 */
 uint8_t *get_keypair_public_key(KEYPAIR *kp);
+/*
+Return private key from the keypair.
+*/
+uint8_t *get_keypair_private_key(KEYPAIR *kp);
+
+/*
+Key init function, from libcrypt4gh
+*/
+uint8_t *crypt4gh_session_key_new(void);
+
+/*
+Free the crypt4gh session key with sodium.
+*/
+void free_crypt4gh_session_key(uint8_t *sk);
 
 /*
 Remove file in callback from FTW.
@@ -45,6 +59,10 @@ int rmrecv(const char *keypath);
 Encryption / decryption chunk convenience functions.
 ***************************************************/
 /*
+Allocate a chunk.
+*/
+CHUNK *allocate_chunk();
+/*
 Get chunk length from struct.
 */
 int wrap_chunk_len(CHUNK *chunk);
@@ -56,6 +74,10 @@ uint8_t *wrap_chunk_content(CHUNK *chunk);
 Free a chunk from memory.
 */
 void free_chunk(CHUNK *chunk);
+/*
+Free a static buffer chunk from memory.
+*/
+void free_chunk_nobuf(CHUNK *chunk);
 
 #endif
 
