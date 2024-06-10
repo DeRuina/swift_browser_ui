@@ -16,6 +16,13 @@
 
       <c-spacer />
 
+      <button
+        class="toggle-bucket-btn"
+        @click="toggleBucketOverrides"
+      >
+        🪣
+      </button>
+
       <div class="desktop-menu">
         <c-menu
           v-for="item of navigationMenuItems"
@@ -90,6 +97,7 @@ import {
   disableFocusOutsideModal,
 } from "@/common/keyboardNavigation";
 import { mdiOpenInNew } from "@mdi/js";
+import { toggleBucketOverrides } from "@/common/i18n";
 
 export default {
   name: "BrowserMainNavbar",
@@ -222,6 +230,9 @@ export default {
         tokenInput.focus();
       }, 300);
     },
+    toggleBucketOverrides() {
+      toggleBucketOverrides();
+    },
   },
 };
 </script>
@@ -237,6 +248,20 @@ export default {
   align-items: center;
   padding: 0 1rem;
   box-shadow: rgba(0, 0, 0, 0.16) 2px 4px 10px;
+}
+
+.toggle-bucket-btn {
+  color: $csc-primary; /* Assuming this is the color used in your navbar */
+  font-size: 1.1rem; /* Matching the.app-name font size */
+  margin-left: 2rem; /* Adjust as needed to match spacing */
+  background-color: transparent; /* No background to match text links */
+  border: none;
+  color: $csc-primary; /* Use the same color as text */
+  padding: 0; /* Adjust padding as needed */
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
 }
 
 .app-name {
