@@ -430,6 +430,7 @@ As can be seen in the picture below the "Advanced excryption options" are not lo
 Changes were made in these files:
 =======
 Created a feature that toggles the wording between Folders & Files to Buckets & Objects as can be seen in the picture.
+
 ![Screenshot from 2024-06-19 11-02-58](https://github.com/DeRuina/swift_browser_ui/assets/81315494/9e66ef94-10d6-4307-b0c1-e1de731f7cbc)
 
 ![Screenshot from 2024-06-19 11-02-58](https://github.com/DeRuina/swift_browser_ui/assets/81315494/9e66ef94-10d6-4307-b0c1-e1de731f7cbc)
