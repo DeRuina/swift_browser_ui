@@ -426,7 +426,17 @@ As can be seen in the picture below the "Advanced excryption options" are not lo
 
 ### Buckets instead of Folders, Added Bucket icon and File icon
 
+<<<<<<< HEAD
 Changes were made in these files:
+=======
+Created a feature that toggles the wording between Folders & Files to Buckets & Objects as can be seen in the picture.
+![Screenshot from 2024-06-19 11-02-58](https://github.com/DeRuina/swift_browser_ui/assets/81315494/9e66ef94-10d6-4307-b0c1-e1de731f7cbc)
+
+![Screenshot from 2024-06-19 11-02-58](https://github.com/DeRuina/swift_browser_ui/assets/81315494/9e66ef94-10d6-4307-b0c1-e1de731f7cbc)
+
+
+Chnages were made in these files:
+>>>>>>> 21053857 (Update README-Allas_Changes.md)
 
 1. **`$REPO/swift_browser_ui_frontend/src/common/bucketOverride.js` File Created**: All the necessary wording that will override the `lang.js` file when the toggle is pressed.
 
