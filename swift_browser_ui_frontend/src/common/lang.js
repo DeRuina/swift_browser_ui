@@ -1081,11 +1081,7 @@ let default_translations = {
   },
 };
 
-// Create a deep copy of the original data
-let default_copy = JSON.parse(JSON.stringify(default_translations));
-
-let translations = reactive(default_translations);
-let overridesApplied = false;
+let translations = default_translations;
 
 function nestedJoin(dst, src) {
   // Join two objects with nested content overriding with the latter

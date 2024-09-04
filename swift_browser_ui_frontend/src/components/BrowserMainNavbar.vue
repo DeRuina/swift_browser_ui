@@ -97,7 +97,6 @@ import {
   disableFocusOutsideModal,
 } from "@/common/keyboardNavigation";
 import { mdiOpenInNew } from "@mdi/js";
-import { toggleBucketOverrides } from "@/common/i18n";
 
 export default {
   name: "BrowserMainNavbar",
@@ -229,9 +228,6 @@ export default {
           .getElementsByTagName("input")[0];
         tokenInput.focus();
       }, 300);
-    },
-    toggleBucketOverrides() {
-      toggleBucketOverrides();
     },
   },
 };

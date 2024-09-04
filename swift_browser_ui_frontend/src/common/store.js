@@ -74,7 +74,6 @@ const store = createStore({
     isLoaderVisible: false,
     prevActiveEl: null,
     newFolder: "",
-    iconIndexnum: 0,
   },
   mutations: {
     setProjects(state, newProjects) {
@@ -249,14 +248,8 @@ const store = createStore({
     setNewFolder(state, payload) {
       state.newFolder = payload;
     },
-    UPDATE_ICON_INDEXNUM(state, payload) {
-      state.iconIndexnum = payload;
-    },
   },
   actions: {
-    updateIconIndexnum: function ({ commit }, payload) {
-      commit("UPDATE_ICON_INDEXNUM", payload);
-    },
     updateContainers: async function (
       { dispatch },
       { projectID, signal, routeContainer = undefined },
@@ -639,9 +632,6 @@ const store = createStore({
         await getDB().objects.bulkPut(newObjects);
       }
     },
-  },
-  getters: {
-    iconIndexnum: state => state.iconIndexnum,
   },
 });
 
