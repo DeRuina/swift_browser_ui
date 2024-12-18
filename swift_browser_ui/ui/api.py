@@ -81,14 +81,22 @@ async def swift_list_containers(
             resp = aiohttp.web.StreamResponse(status=ret.status)
             await resp.prepare(request)
             if ret.status == 200:
+                buffer = b""
                 async for chunk in ret.content.iter_chunked(65535):
+                    buffer += chunk
+                try:
+                    containers = json.loads(buffer)
                     tasks = [
                         _check_last_modified(request, container)
-                        for container in json.loads(chunk)
+                        for container in containers
                     ]
                     ret = await asyncio.gather(*tasks)
                     chunk = json.dumps(ret).encode()
                     await resp.write(chunk)
+                except json.JSONDecodeError as e:
+                    request.app["Log"].error(
+                        f"JSONDecodeError: {e} with data: {buffer[:500]}..."
+                    )
             await resp.write_eof()
         return resp
     except KeyError:
