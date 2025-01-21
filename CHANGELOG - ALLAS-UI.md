@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-01-21
+
+### Changed
+
+-  Bucket size bigger than 1TiB inconstant bug fixed.
 
 ## 2024-10-24
 

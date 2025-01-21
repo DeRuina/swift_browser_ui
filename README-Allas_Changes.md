@@ -365,3 +365,63 @@ Changes were made in these files:
 2. **`package.json` change**: using modified npm package - https://www.npmjs.com/package/allas-ui?activeTab=readme
 
 3. **`dockerfiles/Dockerfile-build-crypt` Change**: copies of the local `csc-ui` added
+
+
+### $REPO/swift_browser_frontend/src/commoon/conv.js
+
+Rewrote the `getHumanReadableSize` function and deleted the `shiftSizeDivision` helper function. Function is using toFixed will will round up to the nearest value, for example 8.08TiB would become 8.1TiB
+
+### $REPO/swift_browser_ui/ui/api.py
+Buffer added which fixed the big project loading/ fetching bug
+
+```py
+async def swift_list_containers(
+    request: aiohttp.web.Request,
+) -> aiohttp.web.StreamResponse:
+    """Proxy Swift list buckets available to a project."""
+    session = await aiohttp_session.get_session(request)
+    client = request.app["api_client"]
+
+    project = request.match_info["project"]
+    request.app["Log"].info(
+        "API call for list buckets from "
+        f"{request.remote}, session: {session} :: {time.ctime()}"
+    )
+
+    # as of v 3.9.1 the return type of query is "MultiMapping[str]"
+    # however the actual function returns MultiDictProxy which has copy
+    # https://github.com/aio-libs/multidict/blob/master/multidict/_multidict_py.py#L146-L163
+    query = request.query.copy()  # type: ignore[attr-defined]
+    query["format"] = "json"
+    try:
+        async with client.get(
+            session["projects"][project]["endpoint"],
+            headers={"X-Auth-Token": session["projects"][project]["token"]},
+            params=query,
+        ) as ret:
+            resp = aiohttp.web.StreamResponse(status=ret.status)
+            await resp.prepare(request)
+            if ret.status == 200:
+                buffer = b""
+                async for chunk in ret.content.iter_chunked(65535):
+                    buffer += chunk
+                try:
+                    containers = json.loads(buffer)
+                    tasks = [
+                        _check_last_modified(request, container)
+                        for container in containers
+                    ]
+                    ret = await asyncio.gather(*tasks)
+                    chunk = json.dumps(ret).encode()
+                    await resp.write(chunk)
+                except json.JSONDecodeError as e:
+                    request.app["Log"].error(
+                        f"JSONDecodeError: {e} with data: {buffer[:500]}..."
+                    )
+            await resp.write_eof()
+        return resp
+    except KeyError:
+        raise aiohttp.web.HTTPForbidden(
+            reason="Account does not have access to the project."
+        )
+```
