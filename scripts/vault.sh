@@ -44,7 +44,7 @@ function initVault {
 
 # pull the plugin if the directory doesn't exist
 if [ ! -d "$C4GH_TRANSIT_DIR" ]; then
-    git clone ssh://git@gitlab.ci.csc.fi:10022/sds-dev/c4gh-transit.git "$C4GH_TRANSIT_DIR"
+    git clone https://github.com/CSCfi/c4gh-transit.git "$C4GH_TRANSIT_DIR"
 fi
 
 # update the code and build the plugin
