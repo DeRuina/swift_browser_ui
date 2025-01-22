@@ -412,8 +412,8 @@ let default_translations = {
       footer: "copyright information",
     },
     accessibilityPage: {
-      service: "Service",
-      date: "dd.mm.yy",
+      service: "Allas Web UI",
+      date: "01.01.2025",
       title: "@:accessibilityPage.service – Accessibility statement",
       intro1: "This accessibility statement applies to the" +
             " @:accessibilityPage.service service and was made on" +
@@ -492,14 +492,14 @@ let default_translations = {
         subheading: "Reporting issues",
         text1: "To report any issues, reach out to CSC's service desk:",
         text2: [
-          { list: "Email" },
-          { list: "Phone" },
+          { list: "servicedesk@csc.fi (Subject: Allas-UI)" },
+          { list: "Phone: +358 9 457 2821. Open Monday to Friday from 8.30 a.m. to 4 p.m." },
         ],
       },
       part4: {
         heading: "Supervisory authority",
-        authorityLink: "#",
-        authorityName: "Authority name",
+        authorityLink: "https://www.saavutettavuusvaatimukset.fi/kayttajan-oikeudet",
+        authorityName: "Regional State Administrative Agency for Southern Finland",
         text: "If you notice accessibility problems on the website," +
               " start by giving feedback to us, that is, the website" +
               " administrator. Receiving a response may take 14 days. If you" +
@@ -512,11 +512,11 @@ let default_translations = {
       part5: {
         heading: "Supervisory authority's contact information",
         text: [
-          { list: "Name" },
-          { list: "Unit" },
-          { list: "Website" },
-          { list: "Email" },
-          { list: "Phone number"},
+          { list: "Regional State Administrative Agency for Southern Finland" },
+          { list: "Accessibility Monitoring Unit" },
+          { list: "www.saavutettavuusvaatimukset.fi" },
+          { list: "saavutettavuus(at)avi.fi" },
+          { list: "Tel: +358 295 016 0000"},
         ],
       },
       part6: {
