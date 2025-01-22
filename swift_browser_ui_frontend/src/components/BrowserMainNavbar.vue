@@ -167,10 +167,6 @@ export default {
               title: this.$t("message.supportMenu.projectInfo"),
               href: this.projectInfoLink,
             },
-            {
-              title: this.$t("message.supportMenu.createTokens"),
-              action: () => this.openTokenModal(),
-            },
           ],
         },
         {
