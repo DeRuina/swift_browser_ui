@@ -493,13 +493,16 @@ let default_translations = {
         text1: "To report any issues, reach out to CSC's service desk:",
         text2: [
           { list: "servicedesk@csc.fi (Subject: Allas-UI)" },
-          { list: "Phone: +358 9 457 2821. Open Monday to Friday from 8.30 a.m. to 4 p.m." },
+          { list: "Phone: +358 9 457 2821. Open Monday to Friday from \
+             8.30 a.m. to 4 p.m." },
         ],
       },
       part4: {
         heading: "Supervisory authority",
-        authorityLink: "https://www.saavutettavuusvaatimukset.fi/kayttajan-oikeudet",
-        authorityName: "Regional State Administrative Agency for Southern Finland",
+        authorityLink:
+        "https://www.saavutettavuusvaatimukset.fi/kayttajan-oikeudet",
+        authorityName:
+        "Regional State Administrative Agency for Southern Finland",
         text: "If you notice accessibility problems on the website," +
               " start by giving feedback to us, that is, the website" +
               " administrator. Receiving a response may take 14 days. If you" +
