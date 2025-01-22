@@ -9,7 +9,7 @@
         <c-row align="center">
           <c-csc-logo alt="CSC_Logo" />
           <h1 class="app-name">
-            {{ $t("message.program_name") }}
+            {{ $t("Allas") }}
           </h1>
         </c-row>
       </router-link>

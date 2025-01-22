@@ -7,7 +7,7 @@
       weight="400"
     >
       <c-csc-logo />
-      <span>{{ $t('message.program_name') }} </span>
+      <span>{{ $t("Allas") }} </span>
     </c-link>
     <c-spacer />
     <LanguageSelector />
