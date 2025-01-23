@@ -174,6 +174,25 @@ export default {
         return "";
       };
 
+      // Create a map to store the total sizes
+      const sizeMap = {};
+
+      // Iterate through the containers to calculate sizes
+      this.conts.forEach(container => {
+        if (container.name.endsWith('_segments')) {
+          const baseName = container.name.replace('_segments', '');
+          if (!sizeMap[baseName]) {
+            sizeMap[baseName] = 0;
+          }
+          sizeMap[baseName] += container.bytes;
+        } else {
+          if (!sizeMap[container.name]) {
+            sizeMap[container.name] = container.bytes;
+          }
+        }
+      });
+
+
       // Filter out segment folders for rendering
       // Map the 'accessRights' to the container if it's a shared container
       const mappedContainers = await Promise.all(
@@ -233,7 +252,7 @@ export default {
               value: item.count,
             },
             size: {
-              value: getHumanReadableSize(item.bytes, this.locale),
+              value: getHumanReadableSize(sizeMap[item.name], this.locale),
             },
             ...(this.hideTags ? {} : {
               tags: {
