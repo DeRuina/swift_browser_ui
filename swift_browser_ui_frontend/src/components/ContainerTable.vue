@@ -187,8 +187,9 @@ export default {
           sizeMap[baseName] += container.bytes;
         } else {
           if (!sizeMap[container.name]) {
-            sizeMap[container.name] = container.bytes;
+          sizeMap[container.name] = 0;
           }
+          sizeMap[container.name] += container.bytes;
         }
       });
 
