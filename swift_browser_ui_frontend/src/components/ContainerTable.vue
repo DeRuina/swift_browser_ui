@@ -152,6 +152,7 @@ export default {
         await getSharedContainers(this.active.id, this.abortController.signal);
     },
     async getPage () {
+      console.log("getPage called");
       let offset = 0;
       let limit = this.conts?.length;
 
@@ -174,31 +175,27 @@ export default {
         return "";
       };
 
-      // Create a map to store the total sizes
-      const sizeMap = {};
+      // const sizeMap = {};
 
-      // Iterate through the containers to calculate sizes
-      this.conts.forEach(container => {
-        if (container.name.endsWith('_segments')) {
-          const baseName = container.name.replace('_segments', '');
-          if (!sizeMap[baseName]) {
-            sizeMap[baseName] = 0;
-          }
-          sizeMap[baseName] += container.bytes;
-        } else {
-          if (!sizeMap[container.name]) {
-          sizeMap[container.name] = 0;
-          }
-          sizeMap[container.name] += container.bytes;
-        }
-      });
+      // this.conts.forEach(container => {
+      //   let baseName = container.name;
+
+      //   if (!sizeMap[baseName]) {
+      //     sizeMap[baseName] = 0;
+      //   }
+
+      //   sizeMap[baseName] += container.bytes;
+      //   console.log(`Processing: ${container.name}, Size: ${container.bytes}`);
+      // });
+
+      // console.log('Final sizeMap:', sizeMap);
+
 
 
       // Filter out segment folders for rendering
       // Map the 'accessRights' to the container if it's a shared container
       const mappedContainers = await Promise.all(
-        this.conts.filter(cont => !cont.name.endsWith("_segments"))
-          .map(async(cont) => {
+        this.conts.map(async(cont) => {
             const sharedDetails = cont.owner ? await getAccessDetails(
               this.$route.params.project,
               cont.container,
@@ -253,7 +250,7 @@ export default {
               value: item.count,
             },
             size: {
-              value: getHumanReadableSize(sizeMap[item.name], this.locale),
+              value: getHumanReadableSize(item.bytes, this.locale),
             },
             ...(this.hideTags ? {} : {
               tags: {
