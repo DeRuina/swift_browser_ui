@@ -177,7 +177,8 @@ export default {
       // Filter out segment folders for rendering
       // Map the 'accessRights' to the container if it's a shared container
       const mappedContainers = await Promise.all(
-        this.conts.map(async(cont) => {
+        this.conts.filter(cont => !cont.name.endsWith("_segments"))
+          .map(async(cont) => {
             const sharedDetails = cont.owner ? await getAccessDetails(
               this.$route.params.project,
               cont.container,
