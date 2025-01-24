@@ -152,7 +152,6 @@ export default {
         await getSharedContainers(this.active.id, this.abortController.signal);
     },
     async getPage () {
-      console.log("getPage called");
       let offset = 0;
       let limit = this.conts?.length;
 
@@ -174,23 +173,6 @@ export default {
         }
         return "";
       };
-
-      // const sizeMap = {};
-
-      // this.conts.forEach(container => {
-      //   let baseName = container.name;
-
-      //   if (!sizeMap[baseName]) {
-      //     sizeMap[baseName] = 0;
-      //   }
-
-      //   sizeMap[baseName] += container.bytes;
-      //   console.log(`Processing: ${container.name}, Size: ${container.bytes}`);
-      // });
-
-      // console.log('Final sizeMap:', sizeMap);
-
-
 
       // Filter out segment folders for rendering
       // Map the 'accessRights' to the container if it's a shared container
