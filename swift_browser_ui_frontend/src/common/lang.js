@@ -214,6 +214,7 @@ let default_translations = {
           "Service Worker might be down. Please refresh the page, wait a " +
           "minute, and try again. Recommended browser for use: Chrome.",
         cancel: "Download cancelled",
+        errorSizeExceeded: "Downloading buckets or folders larger than 5 GiB is currently not supported. However, single files of that size can be downloaded.",
       },
       upload: {
         duplicate: "Files with the same paths are not allowed.",

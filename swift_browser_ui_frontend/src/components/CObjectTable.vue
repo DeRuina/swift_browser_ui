@@ -437,7 +437,14 @@ export default {
       //automated testing creates untrusted events
       const test = eventTrusted === undefined ? false: !eventTrusted;
 
+      const MAX_DOWNLOAD_SIZE = 5 * 1024 * 1024 * 1024; // 5GiB in bytes
+
       if (object?.subfolder) {
+         // Check if folder size exceeds the limit
+         if (object.bytes > MAX_DOWNLOAD_SIZE) {
+          addErrorToastOnMain(this.$t("message.download.errorSizeExceeded", { size: "5 GiB" }));
+          return;
+        }
         const subfolderFiles = this
           .objs
           .filter((obj) => {

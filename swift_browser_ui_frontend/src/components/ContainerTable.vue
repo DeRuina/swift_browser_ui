@@ -516,6 +516,16 @@ export default {
       //automated testing creates untrusted events
       const test = eventTrusted === undefined ? false : !eventTrusted;
 
+      const MAX_DOWNLOAD_SIZE = 5 * 1024 * 1024 * 1024; // 5GiB in bytes
+
+      // Find the container details to check its size
+      const containerData = this.conts.find(cont => cont.name === container);
+
+      if (containerData && containerData.bytes > MAX_DOWNLOAD_SIZE) {
+        addErrorToastOnMain(this.$t("message.download.errorSizeExceeded", { size: "5 GiB" }));
+        return;
+      }
+
       this.$store.state.socket.addDownload(
         container,
         [],

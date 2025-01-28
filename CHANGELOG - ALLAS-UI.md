@@ -2,9 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025-01-21
+## 2025-01-28
 
 ### Changed
+
+- 5GiB limit for downloads of folders / buckets
+
+## 2025-01-27
+
+### Fixed
+
+-  Segment bucket overwrite size of normal buckets bug fixed.
+
+## 2025-01-21
+
+### Fixed
 
 -  Bucket size bigger than 1TiB inconstant bug fixed.
 
@@ -19,7 +31,3 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - UI color change
-
-### Changed
-
--  Internal BETA release ready
