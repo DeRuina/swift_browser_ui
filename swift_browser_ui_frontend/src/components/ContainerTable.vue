@@ -522,7 +522,7 @@ export default {
       const containerData = this.conts.find(cont => cont.name === container);
 
       if (containerData && containerData.bytes > MAX_DOWNLOAD_SIZE) {
-        addErrorToastOnMain(this.$t("message.download.errorSizeExceeded", { size: "5 GiB" }));
+        addErrorToastOnMain(this.$t("message.download.errorSizeExceeded"));
         return;
       }
 

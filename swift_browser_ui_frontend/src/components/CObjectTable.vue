@@ -442,7 +442,7 @@ export default {
       if (object?.subfolder) {
          // Check if folder size exceeds the limit
          if (object.bytes > MAX_DOWNLOAD_SIZE) {
-          addErrorToastOnMain(this.$t("message.download.errorSizeExceeded", { size: "5 GiB" }));
+          addErrorToastOnMain(this.$t("message.download.errorSizeExceeded"));
           return;
         }
         const subfolderFiles = this
