@@ -755,6 +755,9 @@ let default_translations = {
         "(.crdownload, .crswap) avaaminen voi keskeyttää latauksen.",
         error: "Lataus epäonnistui. Yritä uudelleen.",
         cancel: "Lataus peruutettu",
+        errorSizeExceeded: "Yli 5 GiB:n kokoisten ämpärien tai kansioiden " +
+          "lataaminen ei ole tällä hetkellä mahdollista. Yksittäiset " +
+          "tiedostot voivat kuitenkin olla tämän kokoisia ja ne voidaan ladata.",
       },
       upload: {
         duplicate: "Tiedostot, joilla on samat polut, eivät ole sallittuja.",
