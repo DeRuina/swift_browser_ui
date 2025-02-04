@@ -757,7 +757,7 @@ let default_translations = {
         cancel: "Lataus peruutettu",
         errorSizeExceeded: "Yli 5 GiB:n kokoisten ämpärien tai kansioiden " +
           "lataaminen ei ole tällä hetkellä mahdollista. Yksittäiset " +
-          "tiedostot voivat kuitenkin olla tämän kokoisia ja ne voidaan ladata.",
+          "tiedostot voivat kuitenkin olla tämän kokoisia ja ne voidaan ladata",
       },
       upload: {
         duplicate: "Tiedostot, joilla on samat polut, eivät ole sallittuja.",
