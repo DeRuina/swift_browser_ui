@@ -1,6 +1,7 @@
 <template>
   <c-main>
     <MainToolbar />
+    <CookieConsentModal />
     <c-row v-if="!notindex && idb">
       <c-flex>
         <c-container class="padding">
@@ -115,7 +116,13 @@
 </template>
 
 <script>
-export default {};
+import CookieConsentModal from '@/components/CookieConsentModal.vue';
+
+export default {
+  components: {
+    CookieConsentModal,
+  },
+};
 </script>
 
 <style>
