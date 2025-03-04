@@ -56,7 +56,7 @@ let default_translations = {
       },
       dropFiles: "Drag and drop folders here or ",
       support: "Support",
-      program_name: "Allas Web UI",
+      program_name: "Allas",
       program_description: "Allas Web UI provides a simple-to-use web user " +
           "interface for CSC Object Storage service, Allas.",
       currentProj: "Project",
@@ -389,7 +389,7 @@ let default_translations = {
         createTokens: "Create an API token for shared projects",
       },
       footerMenu: {
-        title: "Allas Web UI",
+        title: "Allas",
         serviceProvider: "CSC – IT Center for Science Ltd.",
         serviceProviderLink: "https://csc.fi/",
         menuItems: [
@@ -417,7 +417,7 @@ let default_translations = {
       footer: "copyright information",
     },
     accessibilityPage: {
-      service: "Allas Web UI",
+      service: "Allas",
       date: "01.01.2025",
       title: "@:accessibilityPage.service – Accessibility statement",
       intro1: "This accessibility statement applies to the" +
@@ -598,7 +598,7 @@ let default_translations = {
       },
       dropFiles: "Vedä ja pudota kansiot tähän tai ",
       support: "Tuki",
-      program_name: "Allas Web UI",
+      program_name: "Allas",
       program_description: "Allas Web UI tarjoaa yksinkertaisen " +
           "web-käyttöliittymän CSC:n Object Storage -palveluun, Altaaseen.",
       currentProj: "Projekti",
@@ -937,7 +937,7 @@ let default_translations = {
         createTokens: "Luo API-avaimia",
       },
       footerMenu: {
-        title: "Allas Web UI",
+        title: "Allas",
         serviceProvider: "CSC – Tieteen tietotekniikan keskus Oy",
         serviceProviderLink: "https://csc.fi/",
         menuItems: [

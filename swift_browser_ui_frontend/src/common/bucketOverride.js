@@ -22,7 +22,7 @@ let bucket_overrides = {
       },
       dropFiles: "Drag and drop buckets here or ",
       createFolder: "Create bucket",
-      program_name: "Allas Web UI",
+      program_name: "Allas",
       program_description: "Allas Web UI provides a simple-to-use web user " +
           "interface for CSC Object Storage service, Allas.",
       helplink: "https://docs.csc.fi/data/Allas/",
@@ -197,7 +197,7 @@ let bucket_overrides = {
       },
       dropFiles: "Vedä ja pudota ämpärit tähän tai ",
       createFolder: "Luo Ämpäri",
-      program_name: "Allas Web UI",
+      program_name: "Allas",
       program_description: "Allas Web UI tarjoaa yksinkertaisen " +
           "web-käyttöliittymän CSC:n Object Storage -palveluun, Altaaseen.",
       helplink: "https://docs.csc.fi/data/Allas/",
