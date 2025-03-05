@@ -189,8 +189,8 @@ export default {
   box-shadow: 0 4px 20px rgba(0,47,84);
   font-family: Arial, sans-serif;
   position: relative;
-  max-height: 80vh; /* Add this line */
-  overflow-y: auto; /* Add this line */
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .modal-header {
