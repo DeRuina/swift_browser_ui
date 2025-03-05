@@ -1,6 +1,7 @@
 <template>
   <c-main>
     <MainToolbar />
+    <CookieConsentModal />
     <c-row>
       <c-flex>
         <c-container class="padding">
@@ -41,12 +42,17 @@
 </template>
 
 <script>
+import CookieConsentModal from '@/components/CookieConsentModal.vue';
+
 export default {
   methods: {
     loginButtonClick: function() {
       this.loading = true;
       window.location.pathname = this.$t("message.indexOIDC.href");
     },
+  },
+  Components: {
+    CookieConsentModal,
   },
 };
 </script>
