@@ -43,7 +43,6 @@
 
 <script>
 import CookieConsentModal from '@/components/CookieConsentModal.vue';
-import { Component } from '../../node_modules/allas-ui/dist/types/stencil-public-runtime';
 
 export default {
   methods: {
