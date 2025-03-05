@@ -116,12 +116,8 @@
 </template>
 
 <script>
-import CookieConsentModal from '@/components/CookieConsentModal.vue';
 
 export default {
-  components: {
-    CookieConsentModal,
-  },
 };
 </script>
 
