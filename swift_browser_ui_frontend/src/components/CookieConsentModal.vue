@@ -71,7 +71,8 @@
               <ul>
               <li>
                 <a href="https://support.microsoft.com/en-us/microsoft-edge/
-                delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09"
+                delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-/
+                2a946a29ae09"
                 target="_blank">Microsoft Edge</a>
               </li>
               <li>
@@ -97,11 +98,12 @@
             </ul>
             </details>
             <details>
-              <summary><strong>How can you change your consent?</strong></summary>
+              <summary><strong>How can you change your consent?</strong>
+              </summary>
               <br>
               <p>You can change your consent by either deleting cookies from
-              your browser or by clicking "Cookie settings" from the user menu
-              in the top right corner of the page.</p>
+              your browser or by clicking "Cookie settings" from the user
+              menu in the top right corner of the page.</p>
               <br>
               <p>Remember: If you use more than one browser, you must delete
               cookies in all of them.</p>
@@ -113,11 +115,11 @@
               information and / or processing of personal data, please feel
               welcome to contact us. The cookie policy itself is updated once a
               month by Cookie Information. If you have any questions about our
-              cookie policy, you are welcome to contact CSC's Communications.</p>
+              cookie policy, you are welcome to contact CSC's Communications.
+              </p>
             </details>
           </div>
         </details>
-
         <details class="main-details">
           <summary class="main-summary">
             Cookies used in Allas
@@ -129,7 +131,8 @@
             <li><strong> session</strong> — Manages your session while using the
             service and is deleted when you close your browser.</li>
             <br>
-            <li><strong>language</strong> — Remembers your preferred language.</li>
+            <li><strong>language</strong> — Remembers your preferred language.
+            </li>
             <br>
           </ul>
         </details>
@@ -137,7 +140,8 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="acknowledge" class="acknowledge-btn">I acknowledge</button>
+        <button @click="acknowledge" class="acknowledge-btn">I acknowledge
+        </button>
       </div>
 
     </div>
