@@ -9,6 +9,7 @@ import { vControl } from "@/common/csc-ui-vue-directive";
 
 import CFooter from "@/components/CFooter.vue";
 import MainToolbar from "@/components/MainToolbar.vue";
+import CookieConsentModal from "@/components/CookieConsentModal.vue";
 
 import "@/css/prod.scss";
 
@@ -22,6 +23,7 @@ export function newApp(name, data, Component) {
     components: {
       CFooter,
       MainToolbar,
+      CookieConsentModal,
     },
     data: data,
     created() {
