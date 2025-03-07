@@ -118,7 +118,19 @@
 <script>
 export default {
   mounted() {
-    // Plausible
+    const realPlausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) };
+    window.plausible = function(event, props) {
+      if (event === 'pageview') {
+        if (window.location.pathname.startsWith('/browse/')) {
+          // Rewrite the page URL so Plausible only sees "/browse"
+          props = props || {};
+          props.u = window.location.origin + '/browse';
+        }
+      }
+      return realPlausible(event, props);
+    };
+
+    // Inject Plausible script
     const script = document.createElement("script");
     script.setAttribute("defer", "");
     script.setAttribute("data-domain", "ui-route-allas-ui-dev.2.rahtiapp.fi");
