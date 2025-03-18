@@ -383,7 +383,7 @@ let default_translations = {
       },
       supportMenu: {
         userGuide: "User guide",
-        userGuideLink: "https://docs.csc.fi/data/Allas/",
+        userGuideLink: "https://docs.csc.fi/data/Allas/using_allas/allas-ui",
         projectInfo: "Project information",
         projectInfoBaseLink: "https://my.csc.fi/projects/",
         createTokens: "Create an API token for shared projects",
@@ -396,7 +396,7 @@ let default_translations = {
           { item: "Service Description", link: "https://research.csc.fi/-/allas" },
           { item: "Accessibility", link: "/accessibility" },
           { item: "Privacy", link: "https://csc.fi/en/security-privacy-data-policy-and-open-source-policy/privacy/" },
-          { item: "Documentations", link: "https://docs.csc.fi/data/Allas/" },
+          { item: "Documentations", link: "https://docs.csc.fi/data/Allas/using_allas/allas-ui" },
         ],
       },
     },
