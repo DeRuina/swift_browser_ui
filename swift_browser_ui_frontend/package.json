@@ -14,13 +14,15 @@
     "docker-build-devel": "vite build --mode development"
   },
   "dependencies": {
+    "@intlify/message-compiler": "9.14.2",
+    "@intlify/shared": "9.14.2",
     "@intlify/unplugin-vue-i18n": "^5.0.0",
     "@mdi/js": "^7.4.47",
     "@vitejs/plugin-vue": "^5.1.2",
     "@vueuse/rxjs": "^11.0.0",
     "@ygoe/msgpack": "^1.0.3",
-    "cli-highlight": "^2.1.11",
     "allas-ui": "0.9.5",
+    "cli-highlight": "^2.1.11",
     "dexie": "^4.0.8",
     "eslint": "^9.9.0",
     "eslint-plugin-vue": "^9.27.0",
@@ -37,6 +39,10 @@
     "vuex": "^4.1.0",
     "webpack": "^5.94.0",
     "webpack-cli": "^5.1.4"
+  },
+  "resolutions": {
+    "@intlify/shared": "9.14.2",
+    "@intlify/message-compiler": "9.14.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
