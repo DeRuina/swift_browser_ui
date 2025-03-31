@@ -121,8 +121,8 @@ export default {
     // Plausible
     const script = document.createElement("script");
     script.setAttribute("defer", "");
-    script.setAttribute("data-domain", "ui-route-allas-ui-dev.2.rahtiapp.fi");
-    script.setAttribute("src", "https://stats-dev.2.rahtiapp.fi/js/script.outbound-links.js");
+    script.setAttribute("data-domain", "allas.csc.fi");
+    script.setAttribute("src", "https://stats.rahtiapp.fi/js/script.outbound-links.js");
     document.head.appendChild(script);
   }
 }
