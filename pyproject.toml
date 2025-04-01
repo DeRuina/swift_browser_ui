@@ -51,7 +51,7 @@ test = [
     "pytest-xdist==3.6.1",
     "pytest==8.3.4",
     "tox==4.23.2",
-    "setuptools==71.1.0",
+    "setuptools==78.1.0",
 ]
 ui_test = [
     "pytest-timeout==2.3.1",
