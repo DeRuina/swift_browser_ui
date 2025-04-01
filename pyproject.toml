@@ -47,7 +47,7 @@ test = [
     "flake8-docstrings==1.7.0",
     "flake8==7.1.1",
     "mypy==1.14.1",
-    "pytest-cov==6.0.0",
+    "pytest-cov==6.1.0",
     "pytest-xdist==3.6.1",
     "pytest==8.3.4",
     "tox==4.23.2",
