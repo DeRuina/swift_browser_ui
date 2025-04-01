@@ -25,8 +25,8 @@ importers:
         specifier: ^7.4.47
         version: 7.4.47
       '@vitejs/plugin-vue':
-        specifier: ^5.1.2
-        version: 5.2.1(vite@5.4.13(@types/node@22.10.7)(sass@1.83.4)(terser@5.37.0))(vue@3.5.13(typescript@5.7.3))
+        specifier: ^5.2.3
+        version: 5.2.3(vite@5.4.13(@types/node@22.10.7)(sass@1.83.4)(terser@5.37.0))(vue@3.5.13(typescript@5.7.3))
       '@vueuse/rxjs':
         specifier: ^11.0.0
         version: 11.3.0(rxjs@7.8.1)(vue@3.5.13(typescript@5.7.3))
@@ -499,6 +499,7 @@ packages:
   '@faker-js/faker@9.4.0':
     resolution: {integrity: sha512-85+k0AxaZSTowL0gXp8zYWDIrWclTbRPg/pm/V0dSFZ6W6D4lhcG3uuZl4zLsEKfEvs69xDbLN2cHQudwp95JA==}
     engines: {node: '>=18.0.0', npm: '>=9.0.0'}
+    deprecated: Please update to a newer version
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -1005,8 +1006,8 @@ packages:
     resolution: {integrity: sha512-v/BpkeeYAsPkKCkR8BDwcno0llhzWVqPOamQrAEMdpZav2Y9OVjd9dwJyBLJWwf335B5DmlifECIkZRJCaGaHA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@vitejs/plugin-vue@5.2.1':
-    resolution: {integrity: sha512-cxh314tzaWwOLqVes2gnnCtvBDcM1UMdn+iFR+UjAn411dPT3tOmqrJjbMd7koZpMAmBM/GqeV4n9ge7JSiJJQ==}
+  '@vitejs/plugin-vue@5.2.3':
+    resolution: {integrity: sha512-IYSLEQj4LgZZuoVpdSUCw3dIynTWQgPlaRP6iAvMle4My0HdYwr5g5wQAfwOeHQBmYwEkqF70nRpSilr6PoUDg==}
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0 || ^6.0.0
@@ -4624,7 +4625,7 @@ snapshots:
       '@typescript-eslint/types': 8.20.0
       eslint-visitor-keys: 4.2.0
 
-  '@vitejs/plugin-vue@5.2.1(vite@5.4.13(@types/node@22.10.7)(sass@1.83.4)(terser@5.37.0))(vue@3.5.13(typescript@5.7.3))':
+  '@vitejs/plugin-vue@5.2.3(vite@5.4.13(@types/node@22.10.7)(sass@1.83.4)(terser@5.37.0))(vue@3.5.13(typescript@5.7.3))':
     dependencies:
       vite: 5.4.13(@types/node@22.10.7)(sass@1.83.4)(terser@5.37.0)
       vue: 3.5.13(typescript@5.7.3)
@@ -4782,17 +4783,17 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
 
-  '@webpack-cli/configtest@2.1.1(webpack-cli@5.1.4(webpack@5.97.1))(webpack@5.97.1(webpack-cli@5.1.4))':
+  '@webpack-cli/configtest@2.1.1(webpack-cli@5.1.4)(webpack@5.97.1)':
     dependencies:
       webpack: 5.97.1(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.97.1)
 
-  '@webpack-cli/info@2.0.2(webpack-cli@5.1.4(webpack@5.97.1))(webpack@5.97.1(webpack-cli@5.1.4))':
+  '@webpack-cli/info@2.0.2(webpack-cli@5.1.4)(webpack@5.97.1)':
     dependencies:
       webpack: 5.97.1(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.97.1)
 
-  '@webpack-cli/serve@2.0.5(webpack-cli@5.1.4(webpack@5.97.1))(webpack@5.97.1(webpack-cli@5.1.4))':
+  '@webpack-cli/serve@2.0.5(webpack-cli@5.1.4)(webpack@5.97.1)':
     dependencies:
       webpack: 5.97.1(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.97.1)
@@ -7246,7 +7247,7 @@ snapshots:
 
   tapable@2.2.1: {}
 
-  terser-webpack-plugin@5.3.11(webpack@5.97.1(webpack-cli@5.1.4)):
+  terser-webpack-plugin@5.3.11(webpack@5.97.1):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.25
       jest-worker: 27.5.1
@@ -7444,9 +7445,9 @@ snapshots:
   webpack-cli@5.1.4(webpack@5.97.1):
     dependencies:
       '@discoveryjs/json-ext': 0.5.7
-      '@webpack-cli/configtest': 2.1.1(webpack-cli@5.1.4(webpack@5.97.1))(webpack@5.97.1(webpack-cli@5.1.4))
-      '@webpack-cli/info': 2.0.2(webpack-cli@5.1.4(webpack@5.97.1))(webpack@5.97.1(webpack-cli@5.1.4))
-      '@webpack-cli/serve': 2.0.5(webpack-cli@5.1.4(webpack@5.97.1))(webpack@5.97.1(webpack-cli@5.1.4))
+      '@webpack-cli/configtest': 2.1.1(webpack-cli@5.1.4)(webpack@5.97.1)
+      '@webpack-cli/info': 2.0.2(webpack-cli@5.1.4)(webpack@5.97.1)
+      '@webpack-cli/serve': 2.0.5(webpack-cli@5.1.4)(webpack@5.97.1)
       colorette: 2.0.20
       commander: 10.0.1
       cross-spawn: 7.0.6
@@ -7490,7 +7491,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 3.3.0
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.11(webpack@5.97.1(webpack-cli@5.1.4))
+      terser-webpack-plugin: 5.3.11(webpack@5.97.1)
       watchpack: 2.4.2
       webpack-sources: 3.2.3
     optionalDependencies:
