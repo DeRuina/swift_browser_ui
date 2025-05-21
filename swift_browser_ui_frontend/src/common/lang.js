@@ -23,7 +23,8 @@ let default_translations = {
           "be for example due to missing password and/or " +
           "username.",
         UIdown: "500 – Service is temporarily down. Please try again in" +
-                "a few minutes.",
+                "a few minutes. Please contact support at servicedesk@csc.fi" +
+                "if the problem persists.",
         UIdown_text1:
           "You are seeing this page because " +
           "the service is currently unavailable. Please check back later.",
@@ -567,7 +568,9 @@ let default_translations = {
           "Virhe sivupyynnössä. Tämä voi johtua esimerkiksi " +
           "puuttuvasta salasanasta ja/tai käyttäjänimestä ",
         UIdown: "500 – Palvelu on tilapäisesti poissa käytöstä." +
-                "Yritä uudelleen muutaman minuutin kuluttua.",
+                "Yritä uudelleen muutaman minuutin kuluttua." +
+                "Ota yhteyttä tukeen servicedesk@csc.fi, jos" +
+                "ongelma jatkuu.",
         UIdown_text1:
           "Näet tämän sivun, koska palvelu " +
           "ei ole tällä hetkellä saatavilla.",
