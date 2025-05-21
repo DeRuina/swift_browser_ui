@@ -22,7 +22,8 @@ let default_translations = {
           "Something was wrong with the request. This can " +
           "be for example due to missing password and/or " +
           "username.",
-        UIdown: "500 – Service Unavailable",
+        UIdown: "500 – Service is temporarily down. Please try again in" +
+                "a few minutes.",
         UIdown_text1:
           "You are seeing this page because " +
           "the service is currently unavailable. Please check back later.",
@@ -565,7 +566,8 @@ let default_translations = {
         BadRequest_text:
           "Virhe sivupyynnössä. Tämä voi johtua esimerkiksi " +
           "puuttuvasta salasanasta ja/tai käyttäjänimestä ",
-        UIdown: "500 – Palvelu ei ole saatavilla",
+        UIdown: "500 – Palvelu on tilapäisesti poissa käytöstä." +
+                "Yritä uudelleen muutaman minuutin kuluttua.",
         UIdown_text1:
           "Näet tämän sivun, koska palvelu " +
           "ei ole tällä hetkellä saatavilla.",
