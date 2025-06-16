@@ -49,9 +49,7 @@ async def statsd_middleware(
         statsd_client.timing("request.duration", duration)
         statsd_client.incr(f"requests.{method}")
 
-        if 100 <= status < 200:
-            statsd_client.incr("responses.1xx")
-        elif 200 <= status < 300:
+        if 200 <= status < 300:
             statsd_client.incr("responses.2xx")
         elif 300 <= status < 400:
             statsd_client.incr("responses.3xx")
