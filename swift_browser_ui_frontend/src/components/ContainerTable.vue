@@ -44,6 +44,7 @@ import {
   toggleCopyFolderModal,
   checkIfItemIsLastOnPage,
   addErrorToastOnMain,
+  toggleDeleteModal,
 } from "@/common/globalFunctions";
 import {
   setPrevActiveElement,
@@ -54,6 +55,7 @@ import {
   getObjects,
   swiftDeleteContainer,
   swiftDeleteObjects,
+  removeAccessControlMeta,
 } from "@/common/api";
 
 export default {
@@ -181,7 +183,7 @@ export default {
           .map(async(cont) => {
             const sharedDetails = cont.owner ? await getAccessDetails(
               this.$route.params.project,
-              cont.container,
+              cont.name,
               cont.owner,
               this.abortController.signal) : null;
             const accessRights = sharedDetails ? sharedDetails.access : null;
@@ -456,58 +458,80 @@ export default {
       this.paginationOptions = paginationOptions;
     },
     delete: async function (container, objects) {
-      if (objects > 0) { //if container not empty
-        addErrorToastOnMain(this.$t("message.container_ops.deleteNote"));
+      if (objects > 0) { //if bucket not empty
+        // open modal with all objects for confirmation
+        toggleDeleteModal([
+          { name: container, container: container, isContainer: true },
+        ]);
+        return; // nothing deleted yet
       }
-      else { //delete empty folder without confirmation
-        const projectID = this.$route.params.project;
-        swiftDeleteContainer(
-          projectID,
-          container,
-        ).then(async() => {
+
+      const projectID = this.$route.params.project;
+      swiftDeleteContainer(
+        projectID,
+        container,
+      ).then(async() => {
           /*
             In case the upload was initially cancelled and
             regular container has no uploaded objects yet (0 item), but
             segment container does have, we need to check and delete
             segment objects first before deleting the segment container
           */
-          const segment_objects =  await getObjects(
+        const segment_objects =  await getObjects(
+          projectID,
+          `${container}_segments`,
+        );
+
+        // Delete segment objects if they exist
+        if(segment_objects && segment_objects.length) {
+          await swiftDeleteObjects(
             projectID,
             `${container}_segments`,
+            segment_objects.map(obj => obj.name),
           );
-          if(segment_objects) {
-            await swiftDeleteObjects(
-              projectID,
-              `${container}_segments`,
-              segment_objects.map(obj => obj.name),
-            );
-            await swiftDeleteContainer(projectID, `${container}_segments`);
-          }
+        }
 
-          document.querySelector("#container-toasts").addToast(
-            { progress: false,
-              type: "success",
-              message: this.$t("message.container_ops.deleteSuccess")},
-          );
-          this.$emit("delete-container", container);
-          // Delete stale shared containers if the deleted container
-          // was shared with other projects
+        // Delete segment bucket if it exists
+        try {
+          await swiftDeleteContainer(projectID, `${container}_segments`);
+        } catch (e) {}
+
+        // Show success message
+        document.querySelector("#container-toasts").addToast(
+          { progress: false,
+            type: "success",
+            message: this.$t("message.container_ops.deleteSuccess")},
+        );
+
+        this.$emit("delete-container", container);
+
+        // Remove access control metadata if it was a shared container
+        try {
           const sharedDetails = await this.$store.state.client.getShareDetails(
             projectID,
-            container,
+            container
           );
-          if (sharedDetails.length)
+
+          if (sharedDetails?.length) {
+            await removeAccessControlMeta(projectID, container);
             await deleteStaleSharedContainers(this.$store);
-        });
-      }
-      this.paginationOptions.currentPage =
-        checkIfItemIsLastOnPage({
-          currentPage:
-            this.paginationOptions.currentPage,
-          itemsPerPage:
-            this.paginationOptions.itemsPerPage,
-          itemCount:
-            this.paginationOptions.itemCount - 1,
+          }
+        } catch (e) {}
+
+        this.paginationOptions.currentPage =
+          checkIfItemIsLastOnPage({
+            currentPage:
+              this.paginationOptions.currentPage,
+            itemsPerPage:
+              this.paginationOptions.itemsPerPage,
+            itemCount:
+              this.paginationOptions.itemCount - 1,
+          });
+        })
+        .catch(() => {
+          addErrorToastOnMain(
+            this.$t("message.container_ops.deleteFail") || "Delete failed",
+          );
         });
     },
     beginDownload(container, owner, eventTrusted) {

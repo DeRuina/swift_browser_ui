@@ -355,12 +355,9 @@ export default {
       this.$store.commit("setFolderName", this.containerName);
     },
     confirmDelete: function(item, keypress) {
-      if (isFile(item.name, this.$route) || !this.renderFolders) {
-        toggleDeleteModal([item]);
-        if (keypress) this.moveFocusToDeleteModal();
-      } else {
-        addErrorToastOnMain(this.$t("message.subfolders.deleteNote"));
-      }
+      // Always open the delete modal for files AND folders.
+      toggleDeleteModal([item]); // passes the selected item(s) to the modal
+      if (keypress) this.moveFocusToDeleteModal();
     },
     getCurrentContainer: function () {
       return getDB().containers

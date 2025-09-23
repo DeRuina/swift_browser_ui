@@ -57,7 +57,8 @@
 </template>
 
 <script>
-import { swiftDeleteObjects, getObjects } from "@/common/api";
+import { swiftDeleteObjects, getObjects, swiftDeleteContainer, removeAccessControlMeta } from "@/common/api";
+import { deleteStaleSharedContainers } from "@/common/conv";
 import { getDB } from "@/common/db";
 
 import { isFile } from "@/common/globalFunctions";
@@ -132,78 +133,208 @@ export default {
         // switch type only if mid-deletion after 250ms
         switchAlertType = true;
       }, 250);
+
+      // Utility to get unique values from an array
+      const unique = (arr) => Array.from(new Set(arr));
+      const BATCH = 1000;
+      const batchDelete = async (keys, projectID, containerName) => {
+        for (let i = 0; i < keys.length; i += BATCH) {
+          const chunk = keys.slice(i, i + BATCH);
+          await swiftDeleteObjects(projectID, containerName, chunk);
+        }
+      };
+
+      // list all files under a given folder recursively from IndexedDB
+      const expandFolderToKeys = async (folderName) => {
+        const prefix = folderName.endsWith("/") ? folderName : `${folderName}/`;
+        const files = await getDB().objects
+          .filter(obj => obj.container === this.container && obj.name.startsWith(prefix))
+          .toArray();
+        return files.map(f => f.name);
+      };
+
+      // Delete all objects in a container using pagination
+      const deleteContainerObjectsByMarker = async (projectID, contName) => {
+        let marker = ""; // first page
+        while (true) {
+          // get next page of objects
+          const page = await getObjects(projectID, contName, marker) || [];
+          if (!page.length) break;
+
+          // delete this page of objects
+          const keys = page.map(o => o.name);
+          await batchDelete(keys, projectID, contName);
+
+          // set marker for next page
+          marker = page[page.length - 1].name;
+        }
+      };
+
+      // Check if we are deleting a bucket
+      const isContainerDeletion =
+      this.selectedObjects?.length &&
+      this.selectedObjects[0]?.isContainer === true;
+
+      // Delete a bucket and all its contents
+      if (isContainerDeletion) {
+        if (!this.isDeleting && switchAlertType) this.isDeleting = true;
+
+        const containerName = this.selectedObjects[0].name; // bucket to delete
+        const projectForCalls = this.owner || this.projectID; // projectID
+
+        // Delete all objects in the main bucket using pagination
+        await deleteContainerObjectsByMarker(projectForCalls, containerName);
+
+        // Delete segments buckets if exists and its objects
+        const segContainer = `${containerName}_segments`;
+        try {
+          await deleteContainerObjectsByMarker(projectForCalls, segContainer);
+          try { await swiftDeleteContainer(projectForCalls, segContainer); } catch (e) {}
+        } catch (e) {}
+
+        // Delete the main bucket
+        await swiftDeleteContainer(this.owner || this.projectID, containerName);
+
+        // If shared, remove access control metadata and clean up stale shares
+        try {
+          const sharedDetails = await this.$store.state.client.getShareDetails(
+            this.projectID,
+            containerName
+          );
+
+          if (sharedDetails?.length) {
+            await removeAccessControlMeta(this.projectID, containerName);
+            await deleteStaleSharedContainers(this.$store);
+          }
+        } catch (e) {}
+
+        // Delete from IndexedDB
+        const db = getDB();
+        const cont = await db.containers.get({ projectID: this.projectID, name: containerName });
+        if (cont) {
+          const objs = await db.objects.where({ containerID: cont.id }).toArray();
+          if (objs?.length) await db.objects.bulkDelete(objs.map(o => o.id));
+          await db.containers.delete(cont.id);
+        }
+
+        // Show success message
+        document.querySelector("#container-toasts")?.addToast({
+          progress: false,
+          type: "success",
+          message: this.$t("message.container_ops.deleteSuccess"),
+        });
+
+        try {
+          await this.$store.dispatch("updateContainers", {
+            projectID: this.projectID,
+          });
+        } catch (e) {}
+
+        this.toggleDeleteModal();
+        return; // bucket flow done
+      }
+
+      // File / folder (prefix) deletion inside a bucket
       let to_remove = [];
       let segments_to_remove = []; // Array for segment objects to be deleted
       let segment_container = null;
-      let selectedSubfolder = false;
 
       const isSegmentsContainer = this.container.endsWith("_segments");
 
-      if (!isSegmentsContainer) {
+      if (!isSegmentsContainer && this.selectedObjects?.length) {
+        // find sibling segments bucket for the SAME main bucket
         segment_container = await getDB().containers.get({
           projectID: this.projectID,
           name: `${this.selectedObjects[0].container}_segments`,
         });
       }
 
-      for (let object of this.selectedObjects) {
-        if (switchAlertType && !this.isDeleting) {
-          this.isDeleting = true;
-        }
-        // Only files are able to delete
-        //or when objects are shown as paths
-        if (isFile(object.name, this.$route)
-          || !this.renderedFolders) {
-          to_remove.push(object.name);
-
-          if (segment_container) {
-            // Equivalent object from segment container needs to be deleted
-            const segment_objects =  await getObjects(
-              this.owner ? this.owner : this.projectID,
-              segment_container.name,
-            );
-            const filtered_segment_objects = segment_objects.filter(obj =>
-              obj.name.includes(`${object.name}/`));
-            for (const segment_obj of filtered_segment_objects) {
-              segments_to_remove.push(segment_obj.name);
-            }
-          }
-        } else {
-          //flag if user is trying to delete a subfolder
-          //when folders rendered
-          selectedSubfolder = true;
+      // Pre-fetch segment objects if segment container exists
+      let segment_objects = [];
+      if (segment_container) {
+        try {
+          segment_objects = await getObjects(
+            this.owner || this.projectID,
+            segment_container.name
+          );
+        } catch (e) {
+          segment_objects = [];
         }
       }
 
-      // Delete objects from IDB
-      const objIDs = this.selectedObjects.filter(
-        obj => obj.name && to_remove.includes(obj.name)).reduce(
-        (prev, obj) => [...prev, obj.id], [],
-      );
-      await getDB().objects.bulkDelete(objIDs);
+      for (const object of this.selectedObjects) {
+        if (switchAlertType && !this.isDeleting) this.isDeleting = true;
 
-      swiftDeleteObjects(
-        this.owner || this.projectID,
-        this.container,
-        to_remove,
-      ).then(async () => {
-        if (segments_to_remove.length > 0) {
-          await swiftDeleteObjects(
-            this.owner || this.projectID,
-            segment_container.name,
-            segments_to_remove,
-          );
+        // Check if the object is a file or if we are showing full paths
+        const isAFile = isFile(object.name, this.$route);
+        const showingFullPaths = !this.renderedFolders;
+
+        if (isAFile || showingFullPaths) {
+          // Files or when displaying full paths: direct delete
+          to_remove.push(object.name);
+
+          if (segment_container && segment_objects.length) {
+            for (const seg of segment_objects) {
+              if (seg.name.includes(`${object.name}/`)) {
+                segments_to_remove.push(seg.name);
+              }
+            }
+          }
+        } else {
+           // Folders: need to expand to all files inside
+           const folderFiles = await expandFolderToKeys(object.name);
+           to_remove.push(...folderFiles);
+
+           // Also delete any segments that match the folder prefix
+           if (segment_container && segment_objects.length && folderFiles.length) {
+            const prefixNorm = object.name.endsWith("/") ? object.name : `${object.name}/`;
+            for (const seg of segment_objects) {
+              if (seg.name.startsWith(prefixNorm) || folderFiles.some(f => seg.name.includes(`${f}/`))) {
+                segments_to_remove.push(seg.name);
+              }
+            }
+          }
         }
+      }
 
-        const dataTable = document.getElementById("obj-table");
-        dataTable.clearSelections();
+      // Check if any subfolder is selected for deletion
+      to_remove = unique(to_remove);
+      segments_to_remove = unique(segments_to_remove);
 
-        this.toggleDeleteModal();
+      // Perform batch deletions
+      if (to_remove.length) {
+        await batchDelete(to_remove, this.owner || this.projectID, this.container);
+      }
+      if (segment_container && segments_to_remove.length) {
+        await batchDelete(segments_to_remove, this.owner || this.projectID, segment_container.name);
+      }
 
-        this.getDeleteMessage(to_remove, selectedSubfolder);
-      });
+
+      // Delete from IndexedDB
+      const db = getDB();
+      const cont = await db.containers.get({ projectID: this.projectID, name: this.container });
+      if (cont && to_remove.length) {
+        const rows = await db.objects
+          .where({ containerID: cont.id })
+          .filter(o => to_remove.includes(o.name))
+          .toArray();
+        if (rows.length) await db.objects.bulkDelete(rows.map(r => r.id));
+      }
+
+      // Update the store with the new object list
+      try {
+        await this.$store.dispatch("updateObjects", {
+          projectID: this.projectID,
+          container: cont,
+        });
+      } catch (e) {}
+
+      // Refresh the object list after deletion
+      document.getElementById("obj-table")?.clearSelections();
+      this.toggleDeleteModal();
+      this.getDeleteMessage(to_remove);
     },
-    getDeleteMessage: async function(to_remove, selectedSubfolder) {
+    getDeleteMessage: async function(to_remove) {
       // Only files can be deleted
       // Show warnings when deleting subfolders
       if (to_remove.length > 0) {
@@ -259,16 +390,6 @@ export default {
           { progress: false,
             type: "success",
             message: msg,
-          },
-        );
-      }
-      if (selectedSubfolder) {
-        //if selected files include subfolders
-        document.querySelector("#objects-toasts").addToast(
-          {
-            progress: false,
-            type: "error",
-            message: this.$t("message.subfolders.deleteNote"),
           },
         );
       }
