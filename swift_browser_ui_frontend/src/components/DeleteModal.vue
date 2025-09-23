@@ -1,14 +1,10 @@
 <template>
   <c-card
+    id="delete-objs-modal"
     ref="deleteObjsModal"
     class="delete-modal"
     @keydown="handleKeyDown"
   >
-    <c-card
-      ref="deleteObjsModal"
-      class="delete-modal"
-      @keydown="handleKeyDown"
-    >
       <c-alert
         v-if="!isDeleting"
         type="error"
@@ -48,16 +44,21 @@
           {{ $t("message.objects.deleteInProgress") }}
         </div>
         <c-progress-bar
+          v-if="progressPercent !== undefined"
+          :value="progressPercent"
+          single-line
+        />
+        <c-progress-bar
+          v-else
           single-line
           indeterminate
         />
       </c-alert>
     </c-card>
-  </c-card>
 </template>
 
 <script>
-import { swiftDeleteObjects, getObjects, swiftDeleteContainer, removeAccessControlMeta } from "@/common/api";
+import { swiftDeleteObjects, getObjects, swiftDeleteContainer, removeAccessControlMeta, getContainerMeta } from "@/common/api";
 import { deleteStaleSharedContainers } from "@/common/conv";
 import { getDB } from "@/common/db";
 
@@ -74,6 +75,8 @@ export default {
   data() {
     return {
       isDeleting: false,
+      deleteTotal: 0,
+      deletedSoFar: 0,
     };
   },
   computed: {
@@ -81,6 +84,13 @@ export default {
       return this.$store.state.deletableObjects.length > 0
         ? this.$store.state.deletableObjects
         : [];
+    },
+    progress() {
+      return this.deleteTotal > 0 ? this.deletedSoFar / this.deleteTotal : undefined;
+    },
+    progressPercent() {
+      if (this.progress === undefined) return undefined;
+      return Math.min(100, Math.round(this.progress * 100));
     },
     subfolders() {
       return this.$route.query.prefix ?
@@ -114,6 +124,8 @@ export default {
     toggleDeleteModal: function(keypress) {
       this.$store.commit("toggleDeleteModal", false);
       this.$store.commit("setDeletableObjects", []);
+      this.deletedSoFar = 0;
+      this.deleteTotal = 0;
 
       /*
         Prev Active element is a popup menu and it is removed from DOM
@@ -126,23 +138,34 @@ export default {
         moveFocusOutOfModal(prevActiveElParent, true);
       }
     },
-    deleteObjects: async function () {
-      let switchAlertType = false;
-      setTimeout(() => {
-        // to avoid alert flashing
-        // switch type only if mid-deletion after 250ms
-        switchAlertType = true;
-      }, 250);
+    // Extract object count from container metadata
+    countFromMeta(metaTuple) {
+      try {
+        const headers = metaTuple?.[1] || {};
+        const v = headers["X-Container-Object-Count"] ?? headers["x-container-object-count"];
+        return Number(v) || 0;
+      } catch { return 0; }
+    },
 
-      // Utility to get unique values from an array
-      const unique = (arr) => Array.from(new Set(arr));
+    // Batch delete utility
+    async batchDelete(keys, projectID, containerName) {
       const BATCH = 1000;
-      const batchDelete = async (keys, projectID, containerName) => {
-        for (let i = 0; i < keys.length; i += BATCH) {
-          const chunk = keys.slice(i, i + BATCH);
-          await swiftDeleteObjects(projectID, containerName, chunk);
-        }
-      };
+      for (let i = 0; i < keys.length; i += BATCH) {
+        const chunk = keys.slice(i, i + BATCH);
+        await swiftDeleteObjects(projectID, containerName, chunk);
+        this.deletedSoFar += chunk.length;
+      }
+    },
+    deleteObjects: async function () {
+      this.isDeleting = true;
+      this.deletedSoFar = 0;
+      this.deleteTotal = 0;
+
+      // wait for the modal to update
+      await this.$nextTick();
+
+      // get unique values from an array
+      const unique = (arr) => Array.from(new Set(arr));
 
       // list all files under a given folder recursively from IndexedDB
       const expandFolderToKeys = async (folderName) => {
@@ -163,7 +186,7 @@ export default {
 
           // delete this page of objects
           const keys = page.map(o => o.name);
-          await batchDelete(keys, projectID, contName);
+          await this.batchDelete(keys, projectID, contName);
 
           // set marker for next page
           marker = page[page.length - 1].name;
@@ -177,13 +200,25 @@ export default {
 
       // Delete a bucket and all its contents
       if (isContainerDeletion) {
-        if (!this.isDeleting && switchAlertType) this.isDeleting = true;
 
         const containerName = this.selectedObjects[0].name; // bucket to delete
         const projectForCalls = this.owner || this.projectID; // projectID
 
+        this.deletedSoFar = 0;
+        this.deleteTotal = 0;
+
+        // Get total object count for progress bar
+        try {
+          const mainMeta = await getContainerMeta(projectForCalls, containerName);
+          this.deleteTotal += this.countFromMeta(mainMeta);
+        } catch {}
+        try {
+          const segMeta = await getContainerMeta(projectForCalls, `${containerName}_segments`);
+          this.deleteTotal += this.countFromMeta(segMeta);
+         } catch {}
+
         // Delete all objects in the main bucket using pagination
-        await deleteContainerObjectsByMarker(projectForCalls, containerName);
+         await deleteContainerObjectsByMarker(projectForCalls, containerName);
 
         // Delete segments buckets if exists and its objects
         const segContainer = `${containerName}_segments`;
@@ -263,8 +298,6 @@ export default {
       }
 
       for (const object of this.selectedObjects) {
-        if (switchAlertType && !this.isDeleting) this.isDeleting = true;
-
         // Check if the object is a file or if we are showing full paths
         const isAFile = isFile(object.name, this.$route);
         const showingFullPaths = !this.renderedFolders;
@@ -301,12 +334,16 @@ export default {
       to_remove = unique(to_remove);
       segments_to_remove = unique(segments_to_remove);
 
+      // Initialize progress tracking
+      this.deleteTotal = (to_remove?.length || 0) + (segments_to_remove?.length || 0);
+      this.deletedSoFar = 0;
+
       // Perform batch deletions
       if (to_remove.length) {
-        await batchDelete(to_remove, this.owner || this.projectID, this.container);
+        await this.batchDelete(to_remove, this.owner || this.projectID, this.container);
       }
       if (segment_container && segments_to_remove.length) {
-        await batchDelete(segments_to_remove, this.owner || this.projectID, segment_container.name);
+        await this.batchDelete(segments_to_remove, this.owner || this.projectID, segment_container.name);
       }
 
 
