@@ -286,7 +286,7 @@ export async function removeAccessControlMeta(
     encodeURI(container),
   );
   if (receiver) {
-    url.concat("/", encodeURI(receiver));
+    url = url.concat("/", encodeURI(receiver));
   }
   let aclURL = new URL(url, document.location.origin);
   await DELETE(aclURL);
