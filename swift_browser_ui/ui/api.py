@@ -299,7 +299,7 @@ async def swift_download_object(request: aiohttp.web.Request) -> aiohttp.web.Res
     # Generate temporary URL with the key
     endpoint = session["projects"][project]["endpoint"]
     host = endpoint.split("/v1")[0]
-    path_start = endpoint.replace(host, "")
+    path_start = "/v1"
     url = host + generate_temp_url(
         f"{path_start}/{container}/{object_name}",
         600,  # Use 10 minute lifetime
