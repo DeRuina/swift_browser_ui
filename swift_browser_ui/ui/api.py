@@ -8,6 +8,7 @@ import time
 import typing
 import urllib.parse
 from datetime import datetime
+from urllib.parse import quote, urlparse
 
 import aiohttp.web
 import aiohttp_session
@@ -289,8 +290,7 @@ async def swift_download_object(request: aiohttp.web.Request) -> aiohttp.web.Res
     object_name = request.match_info["object"]
     container = request.match_info["container"]
     request.app["Log"].info(
-        "API call for download {object_name} from "
-        f"{request.remote}, sess: {session} :: {time.ctime()}"
+        f"API call for download {object_name} from {request.remote}, sess: {session} :: {time.ctime()}"
     )
 
     temp_url_key = await get_tempurl_key(request)
@@ -298,31 +298,44 @@ async def swift_download_object(request: aiohttp.web.Request) -> aiohttp.web.Res
 
     # Generate temporary URL with the key
     endpoint = session["projects"][project]["endpoint"]
-    host = endpoint.split("/v1")[0]
-    path_start = "/v1"
+    u = urlparse(endpoint)
+
+    host = f"{u.scheme}://{u.netloc}"  # https://a3s.fi
+    base_path = u.path.rstrip("/")  # /swift/v1 (new) /swift/v1/AUTH_* (old)
+
+    # encodes spaces and special chars
+    container_q = quote(container, safe="")  # "My Bucket" to My%20Bucket
+    object_q = quote(object_name, safe="/")  # "dir/a b.txt" to dir/a%20b.txt
+    signed_path = f"{base_path}/{container_q}/{object_q}"
+
     url = host + generate_temp_url(
-        f"{path_start}/{container}/{object_name}",
+        signed_path,
         600,  # Use 10 minute lifetime
         temp_url_key,
         "GET",
         digest=setd["tempurl_digest_type"],
     )
 
-    # Append query string with query parameters from the request,
-    # mainly to allow ranged requests.
-    parsed = urllib.parse.urlparse(url)
-    qs = urllib.parse.parse_qs(parsed.query)
-    qs.update(request.query)  # type: ignore
-    parsed._replace(query=urllib.parse.urlencode(qs, doseq=True))  # type: ignore
-    url = parsed.geturl()
+    if request.query:
+        parsed = urllib.parse.urlparse(url)
+        # existing TempURL params as list of (key, value) pairs
+        existing = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+        # incoming params as list of pairs. Dont overwrite temp_url_ params
+        incoming = [
+            (k, v) for k, v in request.query.items() if not k.startswith("temp_url_")
+        ]
+        merged = existing + incoming
+        parsed = parsed._replace(query=urllib.parse.urlencode(merged, doseq=True))  # type: ignore
+        url = parsed.geturl()
 
+    head_url = f"{host}{signed_path}"
     async with client.head(
-        f"{endpoint}/{container}/{object_name}",
+        head_url,
         headers={
             "X-Auth-Token": session["projects"][project]["token"],
         },
     ) as ret:
-        ctype = ret.headers["Content-Type"]
+        ctype = ret.headers.get("Content-Type", "application/octet-stream")
 
     return aiohttp.web.Response(
         status=302,
