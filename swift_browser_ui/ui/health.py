@@ -2,10 +2,12 @@
 
 import time
 import typing
+import os
 
 import aiohttp.web
 from aiohttp.client_exceptions import ServerDisconnectedError
 from redis import ConnectionError
+from redis.asyncio.sentinel import Sentinel
 
 import swift_browser_ui.common.signature
 from swift_browser_ui.ui._convenience import get_redis_client
@@ -51,38 +53,6 @@ async def get_x_account_sharing(
     except Exception as e:
         request.app["Log"].info(f"Health failed for reason: {e}")
         _set_error_status(request, services, "swift-x-account-sharing")
-
-
-async def get_swift_sharing(
-    services: typing.Dict[str, typing.Any],
-    request: aiohttp.web.Request,
-    web_client: aiohttp.ClientSession,
-    api_params: dict,
-    performance: typing.Dict[str, typing.Any],
-) -> None:
-    """Poll swift-sharing-request API."""
-    try:
-        if setd["request_internal_endpoint"]:
-            start = time.time()
-            async with web_client.get(
-                str(setd["request_internal_endpoint"]) + "/health", params=api_params
-            ) as resp:
-                request.app["Log"].debug(resp)
-                if resp.status != 200:
-                    services["swift-sharing-request"] = {
-                        "status": "Down",
-                    }
-                else:
-                    request_status = await resp.json()
-                    services["swift-sharing-request"] = request_status
-            performance["swift-sharing-request"] = {"time": time.time() - start}
-        else:
-            services["swift-sharing-request"] = {"status": "Nonexistent"}
-    except ServerDisconnectedError:
-        _set_error_status(request, services, "swift-sharing-request")
-    except Exception as e:
-        request.app["Log"].info(f"Health failed for reason: {e}")
-        _set_error_status(request, services, "swift-sharing-request")
 
 
 async def get_upload_runner(
@@ -148,6 +118,56 @@ async def get_redis(
         _set_error_status(request, services, "redis")
 
 
+async def get_redis_master(services: typing.Dict[str, typing.Any], request: aiohttp.web.Request) -> None:
+    """Add current Redis master (via Sentinel) or role (via direct) to health."""
+    try:
+        sentinel_url = os.environ.get("SWIFT_UI_REDIS_SENTINEL_HOST", "")
+        sentinel_port = os.environ.get("SWIFT_UI_REDIS_SENTINEL_PORT", "")
+        sentinel_master = os.environ.get("SWIFT_UI_REDIS_SENTINEL_MASTER", "")
+
+        if sentinel_url and sentinel_port:
+            s = Sentinel([(str(sentinel_url), int(sentinel_port))])
+            host, port = await s.discover_master(sentinel_master)
+            pod_name = host.split(".", 1)[0] if "." in host else host
+            services["redis-master"] = {"status": "Ok", "host": host, "port": int(port), "pod": pod_name}
+        else:
+            # ask the connected server its role
+            redis_client = await get_redis_client()
+            role = await redis_client.role()
+            if role and role[0] == "master":
+                services["redis-role"] = {"status": "Ok", "role": "master"}
+            elif role and role[0] in ("slave", "replica"):
+                services["redis-role"] = {
+                    "status": "Ok",
+                    "role": "slave",
+                    "master": {"host": role[2], "port": int(role[3])},
+                }
+            else:
+                services["redis-role"] = {"status": "Unknown"}
+            await redis_client.close()
+    except Exception as e:
+        request.app["Log"].info(f"Redis master check failed: {e}")
+        services["redis-master"] = {"status": "Error"}
+
+
+async def get_redis_replication_info(services, request):
+    try:
+        client = await get_redis_client()
+        info = await client.info(section="replication")
+        await client.close()
+        services["redis-replication"] = {
+            "status": "Ok",
+            "role": info.get("role"),
+            "master_host": info.get("master_host"),
+            "master_port": info.get("master_port"),
+            "master_link_status": info.get("master_link_status"),
+            "connected_slaves": info.get("connected_slaves"),
+        }
+    except Exception as e:
+        request.app["Log"].info(f"Redis INFO replication failed: {e}")
+        services["redis-replication"] = {"status": "Error"}
+
+
 async def handle_health_check(request: aiohttp.web.Request) -> aiohttp.web.Response:
     """Handle a service health check."""
     # Pull all health endpoint information
@@ -168,11 +188,13 @@ async def handle_health_check(request: aiohttp.web.Request) -> aiohttp.web.Respo
 
     await get_x_account_sharing(services, request, web_client, api_params, performance)
 
-    await get_swift_sharing(services, request, web_client, api_params, performance)
-
     await get_upload_runner(services, request, web_client, api_params, performance)
 
     await get_redis(services, request, performance)
+
+    await get_redis_master(services, request)
+
+    await get_redis_replication_info(services, request)
 
     status["services"] = services
     status["performance"] = performance
