@@ -1,8 +1,8 @@
 """Health check endpoint."""
 
+import os
 import time
 import typing
-import os
 
 import aiohttp.web
 from aiohttp.client_exceptions import ServerDisconnectedError
@@ -118,7 +118,9 @@ async def get_redis(
         _set_error_status(request, services, "redis")
 
 
-async def get_redis_master(services: typing.Dict[str, typing.Any], request: aiohttp.web.Request) -> None:
+async def get_redis_master(
+    services: typing.Dict[str, typing.Any], request: aiohttp.web.Request
+) -> None:
     """Add current Redis master (via Sentinel) or role (via direct) to health."""
     try:
         sentinel_url = os.environ.get("SWIFT_UI_REDIS_SENTINEL_HOST", "")
@@ -129,7 +131,12 @@ async def get_redis_master(services: typing.Dict[str, typing.Any], request: aioh
             s = Sentinel([(str(sentinel_url), int(sentinel_port))])
             host, port = await s.discover_master(sentinel_master)
             pod_name = host.split(".", 1)[0] if "." in host else host
-            services["redis-master"] = {"status": "Ok", "host": host, "port": int(port), "pod": pod_name}
+            services["redis-master"] = {
+                "status": "Ok",
+                "host": host,
+                "port": int(port),
+                "pod": pod_name,
+            }
         else:
             # ask the connected server its role
             redis_client = await get_redis_client()
