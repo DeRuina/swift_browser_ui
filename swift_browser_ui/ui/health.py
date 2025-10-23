@@ -151,6 +151,7 @@ async def get_redis_master(services: typing.Dict[str, typing.Any], request: aioh
 
 
 async def get_redis_replication_info(services, request):
+    """Collect Redis replication stats for the health output."""
     try:
         client = await get_redis_client()
         info = await client.info(section="replication")
