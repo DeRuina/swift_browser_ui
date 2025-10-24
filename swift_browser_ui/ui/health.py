@@ -126,9 +126,17 @@ async def get_redis_master(
         sentinel_url = os.environ.get("SWIFT_UI_REDIS_SENTINEL_HOST", "")
         sentinel_port = os.environ.get("SWIFT_UI_REDIS_SENTINEL_PORT", "")
         sentinel_master = os.environ.get("SWIFT_UI_REDIS_SENTINEL_MASTER", "")
+        sentinel_password = os.environ.get("SWIFT_UI_REDIS_SENTINEL_PASSWORD", "")
 
         if sentinel_url and sentinel_port:
-            s = Sentinel([(str(sentinel_url), int(sentinel_port))])
+
+            kwargs = {}
+            if sentinel_password:
+                kwargs["password"] = sentinel_password
+
+            s = Sentinel(
+                [(str(sentinel_url), int(sentinel_port))], sentinel_kwargs=kwargs
+            )
             host, port = await s.discover_master(sentinel_master)
             pod_name = host.split(".", 1)[0] if "." in host else host
             services["redis-master"] = {

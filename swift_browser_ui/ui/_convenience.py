@@ -188,6 +188,7 @@ async def get_redis_client() -> redis.Redis:
     sentinel_url = str(os.environ.get("SWIFT_UI_REDIS_SENTINEL_HOST", ""))
     sentinel_port = str(os.environ.get("SWIFT_UI_REDIS_SENTINEL_PORT", ""))
     sentinel_master = os.environ.get("SWIFT_UI_REDIS_SENTINEL_MASTER", "")
+    sentinel_password = os.environ.get("SWIFT_UI_REDIS_SENTINEL_PASSWORD", "")
 
     redis_user = str(os.environ.get("SWIFT_UI_REDIS_USER", ""))
     redis_password = str(os.environ.get("SWIFT_UI_REDIS_PASSWORD", ""))
@@ -200,6 +201,7 @@ async def get_redis_client() -> redis.Redis:
         sentinel = Sentinel(
             [(str(sentinel_url), int(sentinel_port))],
             sentinel_kwargs={
+                "password": sentinel_password,
                 "client_name": "sentinel_allas_ui",
                 "socket_connect_timeout": 2,
                 "socket_timeout": 2,
