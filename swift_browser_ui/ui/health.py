@@ -139,49 +139,32 @@ async def get_redis_master(
             )
             host, port = await s.discover_master(sentinel_master)
             pod_name = host.split(".", 1)[0] if "." in host else host
-            services["redis-master"] = {
+            services["redis-sentinel"] = {
                 "status": "Ok",
-                "host": host,
-                "port": int(port),
+                "role": "master",
                 "pod": pod_name,
             }
         else:
-            # ask the connected server its role
-            redis_client = await get_redis_client()
-            role = await redis_client.role()
-            if role and role[0] == "master":
-                services["redis-role"] = {"status": "Ok", "role": "master"}
-            elif role and role[0] in ("slave", "replica"):
-                services["redis-role"] = {
-                    "status": "Ok",
-                    "role": "slave",
-                    "master": {"host": role[2], "port": int(role[3])},
-                }
-            else:
-                services["redis-role"] = {"status": "Unknown"}
-            await redis_client.close()
+            services["redis-sentinel"] = {"status": "Unknown"}
     except Exception as e:
         request.app["Log"].info(f"Redis master check failed: {e}")
-        services["redis-master"] = {"status": "Error"}
+        services["redis-sentinel"] = {"status": "Error"}
 
 
-async def get_redis_replication_info(services, request):
-    """Collect Redis replication stats for the health output."""
+async def get_redis_connected_info(services, request):
+    """Collect Redis connected node stats for the health output."""
     try:
         client = await get_redis_client()
         info = await client.info(section="replication")
         await client.close()
-        services["redis-replication"] = {
+        services["connected-redis-node"] = {
             "status": "Ok",
             "role": info.get("role"),
-            "master_host": info.get("master_host"),
-            "master_port": info.get("master_port"),
-            "master_link_status": info.get("master_link_status"),
             "connected_slaves": info.get("connected_slaves"),
         }
     except Exception as e:
         request.app["Log"].info(f"Redis INFO replication failed: {e}")
-        services["redis-replication"] = {"status": "Error"}
+        services["connected-redis-node"] = {"status": "Error"}
 
 
 async def handle_health_check(request: aiohttp.web.Request) -> aiohttp.web.Response:
@@ -210,7 +193,7 @@ async def handle_health_check(request: aiohttp.web.Request) -> aiohttp.web.Respo
 
     await get_redis_master(services, request)
 
-    await get_redis_replication_info(services, request)
+    await get_redis_connected_info(services, request)
 
     status["services"] = services
     status["performance"] = performance
