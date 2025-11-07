@@ -252,9 +252,14 @@ export default {
                   title: "Download",
                   path: mdiTrayArrowDown,
                   onClick: ({ event }) => {
-                    item.name.match(".c4gh") || item?.subfolder
-                      ? this.beginDownload(item, event.isTrusted)
-                      : this.navDownload(item.url);
+                    const isShared = !!this.$route.params.owner; // shared bucket if owner param exists
+                    const isFolder = !!item?.subfolder;
+
+                    if (isShared || isFolder) {
+                      this.beginDownload(item, event.isTrusted); // proxy path
+                    } else {
+                      this.navDownload(item.url); // TempURL path
+                    }
                   },
                   disabled: this.owner != undefined &&
                     this.accessRights.length === 0,
