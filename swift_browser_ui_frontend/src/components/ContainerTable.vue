@@ -133,6 +133,7 @@ export default {
   created() {
     this.setHeaders();
     this.setPagination();
+    Promise.all([this.getSharingContainers(), this.getSharedContainers()]);
   },
   beforeMount () {
     this.abortController = new AbortController();
@@ -148,10 +149,12 @@ export default {
     async getSharingContainers () {
       this.sharingContainers =
         await getSharingContainers(this.active.id, this.abortController.signal);
+        this.$store.commit('setSharingContainers', this.sharingContainers);
     },
     async getSharedContainers () {
       this.sharedContainers =
         await getSharedContainers(this.active.id, this.abortController.signal);
+        this.$store.commit('setSharedContainers', this.sharedContainers);
     },
     async getPage () {
       let offset = 0;
