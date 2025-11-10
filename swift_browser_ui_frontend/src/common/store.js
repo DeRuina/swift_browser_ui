@@ -435,11 +435,10 @@ const store = createStore({
         // Update tags for non-segment containers and for those that
         // have difference between new tags and existing tags from IDB
         if (!container.name.endsWith("_segments")) {
-          const tags =
+          const fetched =
           (await getTagsForContainer(
-            projectID, container.name, signal, container.owner)) ||
-          null;
-
+            projectID, container.name, signal, container.owner));
+          const tags = Array.isArray(fetched) ? fetched : [];
           idbContainers.forEach(async (cont) => {
             if (cont.name === container.name && !isEqual(tags, cont.tags)) {
               await getDB().containers
