@@ -129,6 +129,15 @@ export default {
     owner() {
       return this.$route.params.owner;
     },
+    isSharedContainer() {
+    const container = this.$route.params.container;
+    if (this.$route.params.owner) return true; // browsing someone else’s bucket
+    const sharedToMe = (this.$store.state.sharedContainers || [])
+      .some(c => c.container === container); // check if container is in shared containers
+    const sharedOut = (this.$store.state.sharingContainers || [])
+      .includes(container); // check if container is being shared out
+    return sharedToMe || sharedOut;
+  },
   },
   watch: {
     prefix() {
@@ -252,9 +261,14 @@ export default {
                   title: "Download",
                   path: mdiTrayArrowDown,
                   onClick: ({ event }) => {
-                    item.name.match(".c4gh") || item?.subfolder
-                      ? this.beginDownload(item, event.isTrusted)
-                      : this.navDownload(item.url);
+                    const isSharedRoute = !!this.$route.params.owner;
+                    const isFolder = !!item?.subfolder;
+
+                    if (isSharedRoute || this.isSharedContainer || isFolder) {
+                      this.beginDownload(item, event.isTrusted); // proxy path
+                    } else {
+                      this.navDownload(item.url); // TempURL path
+                    }
                   },
                   disabled: this.owner != undefined &&
                     this.accessRights.length === 0,

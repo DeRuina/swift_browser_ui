@@ -75,6 +75,8 @@ const store = createStore({
     prevActiveEl: null,
     newFolder: "",
     sharingUpdated: false,
+    sharingContainers: [],
+    sharedContainers: [],
   },
   mutations: {
     setProjects(state, newProjects) {
@@ -252,6 +254,13 @@ const store = createStore({
     setSharingUpdated(state, payload) {
       state.sharingUpdated = payload;
     },
+    setSharingContainers(state, arr) {
+      state.sharingContainers = arr || [];
+    },
+    setSharedContainers(state, arr) {
+      state.sharedContainers = arr || [];
+    },
+
   },
   actions: {
     updateContainers: async function (
