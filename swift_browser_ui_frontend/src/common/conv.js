@@ -182,14 +182,17 @@ export async function computeSHA256(keyContent) {
 }
 
 function extractTags(meta) {
-  if ("Usertags" in meta[1]) {
-    return meta[1]["Usertags"].split(";");
-  }
-  if ("usertags" in meta[1]) {
-    return meta[1]["usertags"].split(";");
-  }
-  return [];
+  const headers = meta?.[1] || {};
+  const lower = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v])
+  );
+  const raw =
+    lower["usertags"] ||
+    lower["x-container-meta-usertags"] ||
+    lower["x-object-meta-usertags"];
+  return raw ? String(raw).split(";").filter(Boolean) : [];
 }
+
 
 export async function getTagsForContainer(
   project, containerName, signal, owner) {

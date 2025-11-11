@@ -244,19 +244,17 @@ export default {
               tags: {
                 value: null,
                 children: [
-                  ...(item.tags || []).map((tag, index) => ({
-                    key: "tag_" + index + "",
-                    value: tag,
-                    component: {
-                      tag: "c-tag",
-                      params: {
-                        flat: true,
+                  ...(item.tags?.length ?
+                    item.tags.map((tag, index) => ({
+                      key: "tag_" + index + "",
+                      value: tag,
+                      component: {
+                        tag: "c-tag",
+                        params: {
+                          flat: true,
+                        },
                       },
-                    },
-                  })),
-                  ...(item.tags && !item.tags?.length
-                    ? [{ key: "no_tags", value: "-" }]
-                    : []),
+                    })) : [{ key: "no_tags", value: "-" }]),
                 ],
               },
             }),
