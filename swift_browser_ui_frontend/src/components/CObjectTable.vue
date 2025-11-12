@@ -263,8 +263,11 @@ export default {
                   onClick: ({ event }) => {
                     const isSharedRoute = !!this.$route.params.owner;
                     const isFolder = !!item?.subfolder;
+                    const hasNonAscii = /[^\x20-\x7E]/.test(item.name);
+                    const hasSpaceOrTab = /[ \t]/.test(item.name);
 
-                    if (isSharedRoute || this.isSharedContainer || isFolder) {
+                    if (isSharedRoute || this.isSharedContainer || isFolder ||
+                      hasNonAscii || hasSpaceOrTab) {
                       this.beginDownload(item, event.isTrusted); // proxy path
                     } else {
                       this.navDownload(item.url); // TempURL path
