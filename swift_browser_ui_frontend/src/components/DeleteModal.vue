@@ -193,63 +193,63 @@ export default {
         }
       };
 
-      // Check if we are deleting a bucket
-      const isContainerDeletion =
-      this.selectedObjects?.length &&
-      this.selectedObjects[0]?.isContainer === true;
+      // Multiple container deletion check
+      const containersToDelete = (this.selectedObjects || []).filter(o => o?.isContainer === true);
+      if (containersToDelete.length) {
+        const projectForCalls = this.owner || this.projectID;
 
-      // Delete a bucket and all its contents
-      if (isContainerDeletion) {
-
-        const containerName = this.selectedObjects[0].name; // bucket to delete
-        const projectForCalls = this.owner || this.projectID; // projectID
-
+        // progress total (main + _segments for each)
         this.deletedSoFar = 0;
         this.deleteTotal = 0;
+        for (const c of containersToDelete) {
+          try {
+            const mainMeta = await getContainerMeta(projectForCalls, c.name);
+            this.deleteTotal += this.countFromMeta(mainMeta);
+          } catch {}
+          try {
+            const segMeta = await getContainerMeta(projectForCalls, `${c.name}_segments`);
+            this.deleteTotal += this.countFromMeta(segMeta);
+          } catch {}
+        }
 
-        // Get total object count for progress bar
-        try {
-          const mainMeta = await getContainerMeta(projectForCalls, containerName);
-          this.deleteTotal += this.countFromMeta(mainMeta);
-        } catch {}
-        try {
-          const segMeta = await getContainerMeta(projectForCalls, `${containerName}_segments`);
-          this.deleteTotal += this.countFromMeta(segMeta);
-         } catch {}
-
-        // Delete all objects in the main bucket using pagination
+        // delete each bucket fully
+        for (const { name: containerName } of containersToDelete) {
+          // main container objects
          await deleteContainerObjectsByMarker(projectForCalls, containerName);
 
-        // Delete segments buckets if exists and its objects
-        const segContainer = `${containerName}_segments`;
-        try {
-          await deleteContainerObjectsByMarker(projectForCalls, segContainer);
-          try { await swiftDeleteContainer(projectForCalls, segContainer); } catch (e) {}
-        } catch (e) {}
+          // Delete segments buckets if exists and its objects
+          const segContainer = `${containerName}_segments`;
+          try {
+            await deleteContainerObjectsByMarker(projectForCalls, segContainer);
+            try { await swiftDeleteContainer(projectForCalls, segContainer); } catch (e) {}
+          } catch (e) {}
 
-        // Delete the main bucket
-        await swiftDeleteContainer(this.owner || this.projectID, containerName);
+          // Delete the main bucket
+          await swiftDeleteContainer(projectForCalls, containerName);
 
-        // If shared, remove access control metadata and clean up stale shares
-        try {
-          const sharedDetails = await this.$store.state.client.getShareDetails(
-            this.projectID,
-            containerName
-          );
+          // shared metadata cleanup
+          try {
+            const sharedDetails = await this.$store.state.client.getShareDetails(
+              this.projectID,
+              containerName
+            );
 
-          if (sharedDetails?.length) {
-            await removeAccessControlMeta(this.projectID, containerName);
-            await deleteStaleSharedContainers(this.$store);
-          }
-        } catch (e) {}
+            if (sharedDetails?.length) {
+              await removeAccessControlMeta(this.projectID, containerName);
+              await deleteStaleSharedContainers(this.$store);
+            }
+          } catch (e) {}
 
-        // Delete from IndexedDB
-        const db = getDB();
-        const cont = await db.containers.get({ projectID: this.projectID, name: containerName });
-        if (cont) {
-          const objs = await db.objects.where({ containerID: cont.id }).toArray();
-          if (objs?.length) await db.objects.bulkDelete(objs.map(o => o.id));
-          await db.containers.delete(cont.id);
+          // Delete from IndexedDB
+          try {
+            const db = getDB();
+            const cont = await db.containers.get({ projectID: this.projectID, name: containerName });
+            if (cont) {
+              const objs = await db.objects.where({ containerID: cont.id }).toArray();
+              if (objs?.length) await db.objects.bulkDelete(objs.map(o => o.id));
+              await db.containers.delete(cont.id);
+            }
+          } catch (e) {}
         }
 
         // Show success message
@@ -298,12 +298,13 @@ export default {
       }
 
       for (const object of this.selectedObjects) {
-        // Check if the object is a file or if we are showing full paths
+        // Determine if object is a file or folder
         const isAFile = isFile(object.name, this.$route);
-        const showingFullPaths = !this.renderedFolders;
+        const explicitFolder = object?.isFolder === true;
+        const treatAsFolder = explicitFolder || (!isAFile && this.renderedFolders);
 
-        if (isAFile || showingFullPaths) {
-          // Files or when displaying full paths: direct delete
+        if (!treatAsFolder)  {
+          // Files: delete directly
           to_remove.push(object.name);
 
           if (segment_container && segment_objects.length) {

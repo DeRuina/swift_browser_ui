@@ -508,8 +508,11 @@ export default {
       if (this.checkedRows.length < selection.length) {
         for (let i = 0; i < selection.length; i++) {
           if(!this.checkedRows.some(row => row && row.name === selection[i])) {
-            const obj = objects.find(obj => !this.checkedRows.some(row => row.name === selection[i]) && obj.name.includes(`${selection[i]}/`));
-            this.checkedRows.push(obj);
+            this.checkedRows.push({
+              name: selection[i],
+              container: this.containerName,
+              isFolder: true,
+            });
           }
         }
       }
