@@ -9,6 +9,21 @@ function initDB() {
     objects: "++id, &[containerID+name], *tags, *tokens",
     preferences: "id",
   });
+  db.objects.hook('creating', function (_key, obj) {
+    obj.bytes = Number(obj.bytes ?? 0);
+  });
+
+  db.objects.hook('updating', function (mods, _key, oldObj) {
+    if ('bytes' in mods) {
+      const incoming = Number(mods.bytes ?? 0);
+      const isFolder = oldObj.name?.endsWith('/');
+      // Keep an already-known non-zero size if an update tries to set 0
+      if (!isFolder && incoming === 0 && Number(oldObj.bytes ?? 0) > 0) {
+        delete mods.bytes; // do not overwrite with 0
+      }
+    }
+    return mods;
+  });
   db.preferences.count((count) => {
     if (count === 0) {
       db.preferences.add({ id: 1 });

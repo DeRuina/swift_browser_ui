@@ -520,63 +520,61 @@ const store = createStore({
           owner ? owner : "",
         );
 
-        if (newObjects.length === segment_objects.length) {
-          // Find the segments of an object and
-          // update the original objects size accordingly
-          for (let i = 0; i < newObjects.length; i++) {
-            if (segment_objects[i] && newObjects[i].bytes === 0) {
-              newObjects[i].bytes = segment_objects[i].bytes;
-            }
-            else if (!segment_objects[i] && state.isLoaderVisible) {
-            /* When cancelling the upload of large amount of files
-              or big files sizes, the original folder could have
-              more objects than segment folder which results in the
-              last updated file has size 0 (segment folder doesn't have it)
-              Therefore it's better to remove that file.
-            */
-              newObjects.splice(i, 1);
-            }
+        if (!isSegmentsContainer) {
+          // Map segments by their parent object for quick lookup
+          const segsByObject = new Map();
+          for (const seg of segment_objects) {
+            const key = seg.name.split("/")[0];
+            const arr = segsByObject.get(key) || [];
+            arr.push(seg);
+            segsByObject.set(key, arr);
           }
-        } else if (segment_objects.length > newObjects.length) {
-          /*
-            For uploaded objects having size > 5GiB,
-            their equivalent segment_objects are split off into
-            multiple segments (~5GiB/each) of which combined size
-            in total is roughly equal to the original uploaded file.
-            The regular objects are not separated into segments, hence
-            the number of segment_objects > regular objects.
-          */
-          for (let i = 0; i < newObjects.length; i++) {
-            // Filter equivalent segment objects
-            const filteredSegmentObjects = segment_objects.filter(obj =>
-              obj.name.includes(newObjects[i].name),
-            );
-            // Calculate total size of equivalent segment objects
-            const totalSegmentSize = filteredSegmentObjects.reduce(
-              (totalSize, obj) =>
-                obj.name.includes(newObjects[i].name) ?
-                  totalSize + obj.bytes : null, 0,
-            );
-            newObjects[i].bytes = totalSegmentSize;
+
+          // Update sizes of objects based on their segments
+          for (const obj of newObjects) {
+            // skip folder markers
+            if (obj.name.endsWith("/")) continue;
+            // keep known non-zero sizes
+            if (Number(obj.bytes ?? 0) > 0) continue;
+
+            // find segments for this object
+            const segs =
+              segsByObject.get(obj.name) ||
+              segment_objects.filter(s => s.name.startsWith(`${obj.name}/`));
+
+            const total = segs.reduce((sum, s) => sum + Number(s.bytes || 0), 0);
+            if (total > 0) obj.bytes = total;
           }
+
+          // Update last_modified of container if needed
+          updateContainerLastmodified(projectID, container, newObjects);
         }
-        updateContainerLastmodified(projectID, container, newObjects);
       }
 
       for (let i = 0; i < newObjects.length; i++) {
         const newObj = newObjects[i];
-        let oldObj = existingObjects.find(obj => obj.name === newObj.name &&
-          obj.containerID === newObj.containerID,
+        const oldObj = existingObjects.find(
+          obj => obj.name === newObj.name && obj.containerID === newObj.containerID
         );
 
-        // Check if oldObj and newObj have the same properties
-        // except the key "id", because key "id" comes from oldObj in IDB
-        const isEqualObject = isEqualWith(oldObj, newObj, (oldObj, newObj) => {
-          if (oldObj?.id && !newObj?.id) return true;
+        // Consider objects equal if all properties are equal except 'id'
+        const isEqualObject = isEqualWith(oldObj, newObj, (a, b) => {
+          if (a?.id && !b?.id) return true;
         });
 
         if (oldObj) {
-          if (isEqualObject) await getDB().objects.update(oldObj.id, newObj);
+          // Preserve size of object if uploading a 0-byte file
+          const isFolderMarker = newObj.name.endsWith("/");
+          if (!isFolderMarker &&
+              Number(newObj.bytes ?? 0) === 0 &&
+              Number(oldObj.bytes ?? 0) > 0) {
+            newObj.bytes = oldObj.bytes;
+          }
+
+          // Preserve last_modified of object if uploading a file
+          if (!isEqualObject) {
+            await getDB().objects.update(oldObj.id, newObj);
+          }
         } else {
           await getDB().objects.put(newObj);
         }

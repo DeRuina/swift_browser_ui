@@ -93,7 +93,7 @@ let bucket_overrides = {
         shared_table_title: "This bucket is shared with",
         fail_duplicate: "The project already has access to the bucket.",
       },
-      emptyContainer: "This bucket has no content.",
+      emptyContainer: "This bucket/folder has no content.",
       emptyProject: {
         all: "There are no buckets in this project.",
         sharedFrom: "You haven't shared any buckets.",
@@ -268,7 +268,7 @@ let bucket_overrides = {
         shared_table_title: "Tämä ämpäri on jaettu",
         fail_duplicate: "Ämpäri on jo jaettu kyseiselle projektille.",
       },
-      emptyContainer: "Tämä ämpäri on tyhjä.",
+      emptyContainer: "Tämä ämpäri/kansio on tyhjä.",
       emptyProject: {
         all: "Tässä projektissa ei ole ämpäreitä.",
         sharedFrom: "Et ole jakanut yhtään ämpäriä.",

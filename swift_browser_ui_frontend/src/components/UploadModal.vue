@@ -133,7 +133,7 @@
         <!-- Footer options needs to be in CamelCase,
         because csc-ui wont recognise it otherwise. -->
         <c-data-table
-          v-if="dropFiles.length > 0"
+          v-if="dropFiles.length > 0 || emptyFolders.length > 0"
           class="files-table"
           :data.prop="paginatedDropFiles"
           :headers.prop="fileHeaders"
@@ -146,9 +146,7 @@
           @sort="onSort"
           @paginate="getDropTablePage"
         />
-        <p
-          class="info-text is-size-6"
-        >
+        <p class="info-text is-size-6 share-note">
           {{ $t("message.encrypt.uploadedFiles") }}
           <b>{{ active.name }}</b>{{ !owner ? "." : " (" }}
           <c-link
@@ -161,6 +159,17 @@
           </c-link>
           {{ !owner ? "" :
             ") " + $t("message.encrypt.uploadedToShared") }}
+        </p>
+        <p class="unencrypted-note is-size-7" role="note">
+          {{ $t('message.encrypt.unencryptedNotice') }}
+          <c-link
+            href="https://sd-connect.csc.fi"
+            underline
+            target="_blank"
+          >
+            SD-Connect
+            <i class="mdi mdi-open-in-new" />
+          </c-link>
         </p>
         <c-accordion id="accordion" />
       </c-card-content>
@@ -208,7 +217,7 @@ import {
   keyboardNavigationInsideModal,
 } from "@/common/keyboardNavigation";
 import CUploadButton from "@/components/CUploadButton.vue";
-import { swiftDeleteObjects, getObjects, signedFetch } from "@/common/api";
+import { swiftDeleteObjects, getObjects, signedFetch, swiftCreateContainer, swiftCreateEmptyObject } from "@/common/api";
 
 import { debounce, delay } from "lodash";
 import { mdiDelete } from "@mdi/js";
@@ -239,6 +248,7 @@ export default {
       objects: [],
       existingFiles: [],
       filesToOverwrite: [],
+      emptyFolders: [],
       dropFileErrors: [
         {id: "duplicate", show: false},
         {id: "sizeZero", show: false},
@@ -408,6 +418,7 @@ export default {
         this.objects = [];
         this.filesToOverwrite = [];
         this.recvkeys = [];
+        this.emptyFolders = [];
         this.inputFolder = "";
         this.containers = await getDB().containers
           .where({ projectID: this.active.id })
@@ -426,6 +437,9 @@ export default {
       handler() {
         if (this.modalVisible) this.getDropTablePage();
       },
+    },
+    emptyFolders() {
+      if (this.modalVisible) this.getDropTablePage();
     },
     inputFolder: function() {
       if (this.inputFolder && this.interacted) {
@@ -481,6 +495,37 @@ export default {
     }
   },
   methods: {
+    // Create any empty folders that were added
+    async createEmptyFolders() {
+      if (this.emptyFolders.length === 0) return;
+
+      const projectID = this.owner || this.active.id;
+      const container = this.currentFolder || (this.inputFolder || "").trim();
+      if (!container) return;
+
+      // Ensure the container exists (if uploading to root)
+      if (!this.currentFolder) {
+        try {
+          await swiftCreateContainer(projectID, container, []);
+        } catch (_) {}
+      }
+
+      // Get the prefix from the route
+      const rawPrefix = (this.$route.query.prefix || "").replace(/^\/+/, "");
+      const prefix    = rawPrefix && !rawPrefix.endsWith("/") ? `${rawPrefix}/` : rawPrefix;
+
+      // Create each empty folder (as an empty object with a trailing slash)
+      const folders = Array.from(new Set(this.emptyFolders)).sort();
+
+      for (const p of folders) {
+        const path = `${prefix}${p.endsWith("/") ? p : p + "/"}`;
+        try {
+          await swiftCreateEmptyObject(projectID, container, path, this.owner);
+        } catch (e) {
+          this.uploadError = this.$t("message.container_ops.createFail") || "Failed to create folder.";
+        }
+      }
+    },
     getHumanReadableSize,
     checkPage(event, isKey) {
       const page = checkIfItemIsLastOnPage(
@@ -521,56 +566,93 @@ export default {
         setTimeout(() => this.dropFileErrors[0].show = false, 6000);
       }
     },
+    deleteEmptyFolder(path) {
+      const i = this.emptyFolders.indexOf(path);
+      if (i > -1) this.emptyFolders.splice(i, 1);
+    },
     getDropTablePage() {
-      const offset =
-        this.filesPagination.currentPage
-        * this.filesPagination.itemsPerPage
-        - this.filesPagination.itemsPerPage;
-
+      const offset = this.filesPagination.currentPage * this.filesPagination.itemsPerPage
+                    - this.filesPagination.itemsPerPage;
       const limit = this.filesPagination.itemsPerPage;
-      this.paginatedDropFiles = this.dropFiles
-        .sort((a, b) => sortItems(
-          a, b, this.sortBy, this.sortDirection))
-        .slice(offset, offset + limit)
-        .map(file => {
-          return {
-            name: { value: file.name || truncate(100) },
-            type: { value: file.type },
-            size: { value: getHumanReadableSize(file.size, this.locale) },
-            relativePath: {
-              value: file.relativePath || truncate(100),
-            },
-            delete: {
-              children: [
-                {
-                  value: this.$t("message.delete"),
-                  component: {
-                    tag: "c-button",
-                    params: {
-                      text: true,
-                      size: "small",
-                      title: this.$t("message.delete"),
-                      path: mdiDelete,
-                      onClick: () => {
-                        this.deleteDropFile(file);
-                      },
-                      onKeyUp: (e) => {
-                        if(e.keyCode === 13) {
-                          this.deleteDropFile(file);
-                        }
-                      },
-                    },
+
+      // Normal files (from store)
+      const fileRows = this.dropFiles
+        .sort((a, b) => sortItems(a, b, this.sortBy, this.sortDirection))
+        .map(file => ({
+          kind: "file",
+          key: `f:${file.relativePath}`,
+          name: { value: file.name || truncate(100) },
+          type: { value: file.type },
+          size: { value: getHumanReadableSize(file.size, this.locale) },
+          relativePath: { value: file.relativePath || truncate(100) },
+          delete: {
+            children: [{
+              value: this.$t("message.delete"),
+              component: {
+                tag: "c-button",
+                params: {
+                  text: true,
+                  size: "small",
+                  title: this.$t("message.delete"),
+                  path: mdiDelete,
+                  onClick: () => this.deleteDropFile(file),
+                  onKeyUp: (e) => { if (e.keyCode === 13) this.deleteDropFile(file); },
+                },
+              },
+            }],
+          },
+        }));
+
+      // Empty folders (from local state)
+      const folderRows = Array.from(new Set(this.emptyFolders))
+        .sort()
+        .map(p => ({
+          kind: "folder",
+          key: `d:${p}`,
+          name: { value: p.replace(/\/$/, "") },
+          type: { value: this.$t("message.objects.folder") },
+          size: { value: "-" },
+          relativePath: { value: p },
+          delete: {
+            children: [{
+              value: this.$t("message.delete"),
+              component: {
+                tag: "c-button",
+                params: {
+                  text: true,
+                  size: "small",
+                  title: this.$t("message.delete"),
+                  path: mdiDelete,
+                  onClick: () => {
+                    this.emptyFolders = this.emptyFolders.filter(x => x !== p);
                   },
                 },
-              ],
-            },
-          };
-        });
+              },
+            }],
+          },
+        }));
 
-      this.filesPagination = {
-        ...this.filesPagination,
-        itemCount: this.dropFiles.length,
+      const unified = [...fileRows, ...folderRows];
+
+      // Sorting
+      const keyForSort = (row) => {
+        if (this.sortBy === "size") return row.kind === "folder" ? -1 : undefined;
+        if (this.sortBy === "name") return row.name.value.toLowerCase();
+        if (this.sortBy === "relativePath") return row.relativePath.value.toLowerCase();
+        return row.name.value.toLowerCase();
       };
+
+      unified.sort((a, b) => {
+        const A = keyForSort(a);
+        const B = keyForSort(b);
+        if (A === B) return 0;
+        if (this.sortDirection === "asc") return A < B ? -1 : 1;
+        return A > B ? -1 : 1;
+      });
+
+      // Pagination
+      this.paginatedDropFiles = unified.slice(offset, offset + limit);
+      this.filesPagination = { ...this.filesPagination, itemCount: unified.length };
     },
     onSort(event) {
       this.sortBy = event.detail.sortBy;
@@ -600,20 +682,26 @@ export default {
       if (!this.filesToOverwrite.length) return;
 
       let oldSegments = [];
-      const segmentCont= await getDB().containers.get({
+      const segmentCont = await getDB().containers.get({
         projectID: this.active.id,
         name: `${this.currentFolder}_segments`,
       });
-      const segmentObjs =  await getObjects(
-        this.owner ? this.owner : this.active.id,
-        segmentCont.name,
-      );
 
+      // If no segments bucket yet, nothing to delete. Avoid 404 spam.
       if (segmentCont) {
-        for (let i = 0; i < this.filesToOverwrite.length; i++) {
-          const segment = segmentObjs.filter(obj =>
-            obj.name.includes(`${this.filesToOverwrite[i].name}.c4gh/`))[0];
-          if (segment) oldSegments.push(segment.name);
+        let segmentObjs = [];
+        try {
+          segmentObjs = await getObjects(
+            this.owner || this.active.id,
+            segmentCont.name
+          );
+        } catch (_) {
+          segmentObjs = [];
+        }
+
+        for (const f of this.filesToOverwrite) {
+          const seg = segmentObjs.find(obj => obj.name.includes(`${f.name}.c4gh/`));
+          if (seg) oldSegments.push(seg.name);
         }
       }
 
@@ -651,23 +739,29 @@ export default {
       }
       // Recursively process items inside a directory
       if (entry && entry.isDirectory) {
-        let newPath = path + entry.name + "/";
-        let dirReader = entry.createReader();
+        const newPath = path + entry.name + "/";
+        const dirReader = entry.createReader();
         let allEntries = [];
 
-        let readEntries = () => {
-          dirReader.readEntries(entries => {
-            if (this.addFiles) {
-              if (entries.length) {
-                allEntries = allEntries.concat(entries);
-                return readEntries();
-              }
-              for (let item of allEntries) {
-                if (this.addFiles) {
-                  this.setFile(item, newPath);
-                }
-              }
-            } else return; //modal was closed
+        const readEntries = () => {
+          dirReader.readEntries((entries) => {
+            if (!this.addFiles) return; // modal was closed
+
+            if (entries.length) {
+              allEntries = allEntries.concat(entries);
+              return readEntries();
+            }
+
+            // If no entries, it's an empty folder
+            if (allEntries.length === 0) {
+              this.emptyFolders.push(newPath);
+              this.getDropTablePage();
+            }
+
+            // Recurse into children (if any)
+            for (const child of allEntries) {
+              if (this.addFiles) this.setFile(child, newPath);
+            }
           });
         };
         readEntries();
@@ -763,19 +857,27 @@ export default {
       this.sortDirection = "asc";
       this.filesPagination.currentPage = 1;
       this.uploadError = "";
+      this.emptyFolders = [];
 
       moveFocusOutOfModal(this.prevActiveEl);
     },
     checkIfCanUpload() {
-      if (this.dropFiles.length === 0) {
+      // Check if there are files or empty folders to upload
+      const hasFiles = this.dropFiles.length > 0;
+      const hasEmptyFolders = this.emptyFolders.length > 0;
+
+      if (!hasFiles && !hasEmptyFolders) {
         return this.$t("message.upload.addFiles");
       }
-      else if (!this.pubkey.length && !this.recvkeys.length) {
+
+      // Keys are only required when uploading files
+      if (hasFiles && !this.pubkey.length && !this.recvkeys.length) {
         return this.$t("message.upload.error");
       }
-      else return "";
+
+      return "";
     },
-    onUploadClick() {
+    async onUploadClick() {
       this.toastMsg = this.checkIfCanUpload();
 
       if (!this.currentFolder) {
@@ -798,9 +900,65 @@ export default {
         return;
       }
       else {
+        const hasFiles = this.dropFiles.length > 0;
+        const hasEmptyFolders = this.emptyFolders.length > 0;
+
+        // If uploading to root, create the container first
+        const creatingNewBucket = !this.currentFolder;
+        const projectID = this.owner || this.active.id;
+        const container = this.currentFolder || this.inputFolder.trim();
+
+        // Create the container (if needed)
+        try {
+          if (creatingNewBucket) {
+            await swiftCreateContainer(projectID, container, []);
+          }
+        } catch (e) {
+          this.uploadError = this.$t("message.error.createFail") || "Bucket creation failed.";
+          return;
+        }
+
+        // If only empty folders, create them and exit
+        if (!hasFiles && hasEmptyFolders) {
+          await this.createEmptyFolders();
+          try {
+            const projectID = this.owner || this.active.id;
+            const container = this.currentFolder || this.inputFolder.trim();
+
+            // Refresh containers list
+            await this.$store.dispatch("updateContainers", { projectID });
+
+             const db = getDB();
+             const cont = await db.containers.get({ projectID, name: container });
+             if (cont) {
+              await this.$store.dispatch("updateObjects", {
+                projectID,
+                container: cont,
+                ...(this.owner ? { owner: this.owner } : {}),
+              });
+              // Update container object count and last_modified
+               const objs  = await db.objects.where({ containerID: cont.id }).toArray();
+               const bytes = objs.reduce((sum, o) => sum + (o?.bytes || 0), 0);
+
+               await db.containers.update(cont.id, {
+                 count: objs.length,
+                 bytes,
+                 last_modified: new Date().toISOString(),
+               });
+
+             }
+            this.$store.commit("setNewFolder", container);
+          } catch (e) {}
+          this.toggleUploadModal();
+          return;
+        }
+
+        // Delete segments for files to be overwritten
         this.deleteSegments();
+        if (hasEmptyFolders) await this.createEmptyFolders();
         this.beginEncryptedUpload();
       }
+
     },
     async aBeginEncryptedUpload() {
       // We need the proper IDs for the other project for Vault access
@@ -832,6 +990,14 @@ export default {
         this.currentFolder :
         this.inputFolder;
 
+      const rawPrefix = (this.$route.query.prefix || "").replace(/^\/+/, "");
+      const prefix    = rawPrefix && !rawPrefix.endsWith("/") ? `${rawPrefix}/` : rawPrefix;
+      const filesForUpload = this.$store.state.dropFiles.map(file => {
+        const rp = file.relativePath || file.name;
+        file.relativePath = `${prefix}${rp}`;
+        return file;
+      });
+
       this.$store.commit(
         "setUploadFolder",
         { name: folderName, owner: this.$route.params.owner },
@@ -840,7 +1006,7 @@ export default {
 
       this.socket.addUpload(
         folderName,
-        this.$store.state.dropFiles.map(item => item),
+        filesForUpload,
         this.recvkeys.map(item => item),
         owner,
         ownerName,
@@ -952,6 +1118,19 @@ c-accordion c-button {
 }
 c-accordion h3 {
   padding: 1rem 0;
+}
+
+.unencrypted-note {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+.share-note {
+  margin-bottom: 0 !important;
+}
+
+.share-note + .unencrypted-note {
+  margin-top: 0 !important;
 }
 
 </style>

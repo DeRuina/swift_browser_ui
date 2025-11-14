@@ -195,7 +195,7 @@ export default {
       const displayOptions = {
         showTimestamp: this.showTimestamp,
         hideTags: this.hideTags,
-        hidePagination: this.renderFolders,
+        hidePagination: this.hidePagination,
       };
       this.tableOptions = [
         {

@@ -38,6 +38,7 @@
       id="optionsbar"
       justify="space-between"
     >
+    <div class="left-stack">
       <c-text-field
         id="search"
         v-model="searchQuery"
@@ -46,11 +47,36 @@
         :placeholder="$t('message.objects.filterBy')"
         type="search"
       >
-        <i
-          slot="pre"
-          class="mdi mdi-filter-variant mdi-24px"
-        />
+        <i slot="pre" class="mdi mdi-filter-variant mdi-24px" />
       </c-text-field>
+
+      <c-button
+        v-if="showGoUp"
+        id="go-up-btn"
+        size="small"
+        text
+        @click="goUpOneLevel"
+        @keyup.enter="goUpOneLevel"
+      >
+        <i slot="icon" class="mdi mdi-arrow-up-left" />
+        {{ atBucketRoot
+          ? ($t('message.objects.backToBuckets') || 'Back to all buckets')
+          : ($t('message.objects.upOneLevel') || 'Up one level') }}
+      </c-button>
+    </div>
+      <div class="row-end">
+      <c-button
+      id="create-folder-btn"
+      size="small"
+      outlined
+      :disabled="owner && accessRights.length <= 1"
+      data-testid="create-subfolder"
+      @click="openSubFolderModal(false)"
+      @keyup.enter="openSubFolderModal(true)"
+    >
+      <i slot="icon" class="mdi mdi-folder-plus-outline" />
+      {{ $t('message.objects.createFolder') || 'Create folder' }}
+    </c-button>
       <c-menu
         :key="optionsKey"
         :items.prop="tableOptions"
@@ -61,6 +87,7 @@
           {{ $t("message.tableOptions.displayOptions") }}
         </span>
       </c-menu>
+      </div>
     </c-row>
     <div
       v-if="checkedRows.length"
@@ -97,6 +124,7 @@
     </div>
     <div id="obj-table-wrapper">
       <CObjectTable
+        :key="`obj-${containerName}-${prefix || 'root'}`"
         :breadcrumb-clicked-prop="breadcrumbClicked"
         :objs="filtering ? filteredObjects : oList"
         :disable-pagination="hidePagination"
@@ -127,7 +155,6 @@ import {
   getSharedContainers,
   getAccessDetails,
   toggleDeleteModal,
-  isFile,
   updateObjectsAndObjectTags,
   addErrorToastOnMain,
 } from "@/common/globalFunctions";
@@ -136,6 +163,7 @@ import {
   disableFocusOutsideModal,
   addFocusClass,
 } from "@/common/keyboardNavigation";
+import { toggleCreateFolderModal } from "@/common/globalFunctions";
 import { getDB } from "@/common/db";
 import { liveQuery } from "dexie";
 import { useObservable } from "@vueuse/rxjs";
@@ -144,6 +172,7 @@ import { debounce, escapeRegExp } from "lodash";
 import BreadcrumbNav from "@/components/BreadcrumbNav.vue";
 import { toRaw } from "vue";
 import { DEV } from "@/common/conv";
+import { swiftCreateEmptyObject } from "@/common/api";
 
 export default {
   name: "ObjectTable",
@@ -184,6 +213,10 @@ export default {
     prefix () {
       return this.$route.query.prefix || "";
     },
+    atBucketRoot() { return !this.prefix; },
+    showGoUp() {
+    return this.$route.name === "ObjectsView" || this.$route.name === "SharedObjects";
+  },
     queryPage () {
       return this.$route.query.page || 1;
     },
@@ -261,6 +294,15 @@ export default {
     oList() {
       if (this.objsLoading) setTimeout(() => this.objsLoading = false, 100);
     },
+    prefix(val) {
+    if (val && !val.endsWith("/")) {
+      // normalize the URL in place (doesn't add a new history entry)
+      const query = { ...this.$route.query, prefix: `${val}/` };
+      this.$router.replace({ name: this.$route.name, params: this.$route.params, query });
+      return;
+    }
+    this.breadcrumbClicked = true;
+  },
   },
 
   created: function () {
@@ -288,6 +330,49 @@ export default {
       await this.getSharedContainers();
       await this.getFolderSharedStatus();
       await this.updateObjects();
+    },
+    openSubFolderModal(keypress) {
+      toggleCreateFolderModal();
+      if (keypress) setPrevActiveElement();
+      this.$nextTick(() => {
+        setTimeout(() => {
+          const input = document.querySelector("#newFolder-input input");
+          if (input) { input.tabIndex = "0"; input.focus(); }
+        }, 300);
+      });
+    },
+    goUpOneLevel() {
+      const current = this.prefix || "";
+
+      // Indicate that the breadcrumb was clicked to prevent
+      this.breadcrumbClicked = true;
+
+      if (current) {
+        // go up one pseudofolder level
+        const trimmed = current.replace(/\/+$/, "");
+        const parent = trimmed.includes("/")
+          ? trimmed.slice(0, trimmed.lastIndexOf("/") + 1)
+          : "";
+
+        const query = { ...this.$route.query, page: 1 };
+        delete query.file;
+        if (parent) query.prefix = parent; else delete query.prefix;
+
+        this.$router.push({
+          name: this.$route.name,
+          params: this.$route.params,
+          query,
+        });
+        return;
+      }
+
+      // at bucket root, go back to all buckets view
+      const user = this.$route.params.user || this.$store.state.uname;
+      this.$router.push({
+        name: "AllFolders",
+        params: { project: this.$route.params.project, user },
+        query: { page: 1 },
+      });
     },
     breadcrumbClickHandler(value) {
       this.breadcrumbClicked = value;
@@ -461,11 +546,8 @@ export default {
         1;
     },
     getPrefix: function () {
-      // Get current pseudofolder prefix
-      if (this.$route.query.prefix == undefined) {
-        return "";
-      }
-      return this.$route.query.prefix;
+      const p = this.$route.query.prefix || "";
+      return p && !p.endsWith("/") ? `${p}/` : p;
     },
     filter: function () {
       if(this.searchQuery.length === 0) {
@@ -726,6 +808,13 @@ export default {
 #objects-toasts {
   bottom: 40vh;
 }
+
+.row-end {
+  display: flex;
+  gap: 1.5rem;
+  align-items: baseline;
+}
+
 
 #obj-table-wrapper {
   position: relative;

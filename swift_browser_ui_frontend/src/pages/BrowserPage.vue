@@ -24,7 +24,8 @@
         disable-backdrop-blur
         width="64vw"
       >
-        <CreateFolderModal />
+        <SubFolderModal v-if="$route.params.container" />
+        <CreateFolderModal v-else />
       </c-modal>
       <c-modal
         v-model="openUploadModal"
@@ -114,7 +115,6 @@
 
 <script>
 import { truncate } from "@/common/conv";
-
 
 export default {
   name: "BrowserPage",

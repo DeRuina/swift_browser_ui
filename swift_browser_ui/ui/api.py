@@ -1090,3 +1090,48 @@ async def close_upload_session(
         session["projects"][project].pop("runner")
         session.changed()
     return aiohttp.web.Response(status=status)
+
+
+async def swift_put_object(request: aiohttp.web.Request) -> aiohttp.web.Response:
+    """Proxy a Swift object PUT (used for creating folder markers)."""
+    session = await aiohttp_session.get_session(request)
+    client = request.app["api_client"]
+
+    project = request.match_info["project"]
+    container = request.match_info["container"]
+    obj_path = request.match_info["object"]
+
+    # Avoid double-encoding (frontend may already encode the path)
+    obj_path = urllib.parse.unquote(obj_path)
+
+    endpoint = session["projects"][project]["endpoint"]
+    owner = request.query.get("owner")
+    if owner:
+        endpoint = endpoint.replace(project, owner)
+
+    url = (
+        f"{endpoint}/"
+        f"{urllib.parse.quote(container, safe='')}/"
+        f"{urllib.parse.quote(obj_path, safe='/')}"
+    )
+
+    body = await request.read()
+
+    # Base headers
+    headers = {
+        "X-Auth-Token": session["projects"][project]["token"],
+    }
+    # Help UIs treat zero-byte trailing-slash objects as directories
+    if not body and obj_path.endswith("/"):
+        headers["Content-Type"] = "application/directory"
+
+    # Forward all query params except 'owner'
+    params = request.query.copy()
+    params.pop("owner", None)
+
+    async with client.put(url, headers=headers, data=body, params=params) as upstream:
+        resp = aiohttp.web.Response(status=upstream.status, body=await upstream.read())
+        # Forward ETag for client-side checks/caching if present
+        if "ETag" in upstream.headers:
+            resp.headers["ETag"] = upstream.headers["ETag"]
+        return resp

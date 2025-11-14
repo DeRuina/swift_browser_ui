@@ -173,11 +173,15 @@ export default {
         this.paginationOptions.currentPage = 1;
       }
     },
-    changeFolder: function (folder) {
+    changeFolder(folder) {
       this.paginationOptions.currentPage = 1;
-      this.$router.push(
-        `${window.location.pathname}?prefix=${getPrefix(this.$route)}${folder}`,
-      );
+      const base = getPrefix(this.$route) || "";
+      const next = `${base}${folder}`.replace(/\/?$/, "/");
+      this.$router.push({
+        name: this.$route.name,
+        params: this.$route.params,
+        query: { ...this.$route.query, page: 1, prefix: next },
+      });
     },
     formatItem: function (item) {
       const name = this.renderFolders ?
@@ -220,7 +224,7 @@ export default {
           }),
         },
         size: {
-          value: getHumanReadableSize(item.bytes, this.locale),
+          value: getHumanReadableSize(Number(item.bytes) || 0, this.locale)
         },
         last_modified: {
           value: this.showTimestamp? parseDateTime(
@@ -340,17 +344,23 @@ export default {
         limit = this.paginationOptions.itemsPerPage;
       }
 
-      // Filtered objects based on prefix
-      const filteredObjs = this
-        .objs
-        .filter((obj) => {
-          return obj.name.startsWith(getPrefix(this.$route));
-        });
+      // Filter objects by prefix
+      const prefix = getPrefix(this.$route);
+      const filteredObjs = this.objs
+        .filter(obj => obj.name.startsWith(prefix))
+        .filter(obj => obj.name !== prefix);
 
-      if (this.objs.length > 0 && filteredObjs.length == 0 &&
-        !this.$store.state.openDeleteModal) {
-        window.location.pathname = "/notfound";
+
+      const p = this.$route.query.prefix || "";
+      if (p && !this.$store.state.openDeleteModal &&
+          !this.objs.some(o => o.name === p || o.name.startsWith(p))) {
+        let up = p.replace(/[^/]+\/?$/, "");
+        if (up && !up.endsWith("/")) up += "/";
+        this.$router.replace({
+          query: { ...this.$route.query, prefix: up || undefined }
+        });
       }
+
 
       let pagedLength = 0;
 

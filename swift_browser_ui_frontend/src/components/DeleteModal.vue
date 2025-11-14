@@ -58,7 +58,14 @@
 </template>
 
 <script>
-import { swiftDeleteObjects, getObjects, swiftDeleteContainer, removeAccessControlMeta, getContainerMeta } from "@/common/api";
+import {
+  swiftDeleteObjects,
+  getObjects,
+  swiftDeleteContainer,
+  removeAccessControlMeta,
+  getContainerMeta,
+  swiftCreateEmptyObject,
+} from "@/common/api";
 import { deleteStaleSharedContainers } from "@/common/conv";
 import { getDB } from "@/common/db";
 
@@ -315,15 +322,20 @@ export default {
             }
           }
         } else {
-           // Folders: need to expand to all files inside
-           const folderFiles = await expandFolderToKeys(object.name);
-           to_remove.push(...folderFiles);
+          // Folders: need to expand to all files inside
+          const folderFiles = await expandFolderToKeys(object.name);
+          to_remove.push(...folderFiles);
 
-           // Also delete any segments that match the folder prefix
-           if (segment_container && segment_objects.length && folderFiles.length) {
+          // If the folder is empty, delete the folder marker too
+          if (!folderFiles.includes(object.name)) {
+            to_remove.push(object.name);
+          }
+
+          // Also delete any segments that match the folder prefix
+          if (segment_container && segment_objects.length) {
             const prefixNorm = object.name.endsWith("/") ? object.name : `${object.name}/`;
             for (const seg of segment_objects) {
-              if (seg.name.startsWith(prefixNorm) || folderFiles.some(f => seg.name.includes(`${f}/`))) {
+              if (seg.name.startsWith(prefixNorm) || (folderFiles.length && folderFiles.some(f => seg.name.includes(`${f}/`)))) {
                 segments_to_remove.push(seg.name);
               }
             }
@@ -358,6 +370,33 @@ export default {
           .toArray();
         if (rows.length) await db.objects.bulkDelete(rows.map(r => r.id));
       }
+
+      // If we deleted all objects inside a folder, recreate the folder marker
+      try {
+        const isSegmentsContainer = this.container.endsWith("_segments");
+        const currentPrefix = (this.$route.query.prefix || "").replace(/^\/+/, "");
+        const markerName = currentPrefix ? (currentPrefix.endsWith("/") ? currentPrefix : currentPrefix + "/") : "";
+
+        const userExplicitlyDeletedFolder =
+          !!markerName && this.selectedObjects.some(o => o?.name === markerName);
+
+        if (!isSegmentsContainer && this.renderedFolders && markerName && !userExplicitlyDeletedFolder && cont) {
+          const remaining = await db.objects
+            .where({ containerID: cont.id })
+            .filter(o => o.name.startsWith(currentPrefix))
+            .count();
+
+          if (remaining === 0) {
+            // Recreate the folder marker so the folder remains visible
+            await swiftCreateEmptyObject(
+              this.owner || this.projectID,
+              this.container,
+              markerName,
+              this.owner
+            );
+          }
+        }
+      } catch (_) {}
 
       // Update the store with the new object list
       try {
