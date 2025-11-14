@@ -17,7 +17,7 @@
         @click="onClickBreadcrumb"
       >
         <i class="mdi mdi-chevron-right" />
-        <span :class="subfolders === '' ? 'last' : 'default'">
+        <span :class="subfolders.length === 0 ? 'last' : 'default'">
           &nbsp;{{ folder }}
         </span>
       </router-link>
@@ -45,9 +45,11 @@ export default {
     folder() {
       return this.$route.params.container;
     },
-    subfolders() { //array of subfolder titles
-      return this.$route.query.prefix != undefined ?
-        this.$route.query.prefix.split("/") : "";
+    subfolders() { // array of subfolder titles
+      const raw = this.$route.query.prefix || "";
+      if (!raw) return [];
+      // strip trailing slashes and remove empty segments
+      return raw.replace(/\/+$/, "").split("/").filter(Boolean);
     },
     currentRoute() {
       return this.$route.name;
@@ -58,15 +60,17 @@ export default {
       this.$emit("breadcrumbClicked", true);
     },
     getPath(index) {
-      if (index === this.subfolders.length-1) {
+      // construct route object for router-link
+      const parts = ((this.$route.query.prefix || "").replace(/\/+$/, ""))
+        .split("/")
+        .filter(Boolean);
 
-        return { name: this.currentRoute, query:
-          { prefix: this.$route.query.prefix }};
+      // last item is current folder, so link to it without prefix
+      if (index === this.subfolders.length - 1) {
+        return { name: this.currentRoute, query: { prefix: parts.join("/") } };
       } else {
-        let prefixes = this.$route.query.prefix.split("/");
-        prefixes = prefixes.slice(0, index+1).join("/");
-        return { name: this.currentRoute, query:
-          { prefix: prefixes }};
+        const prefix = parts.slice(0, index + 1).join("/");
+        return { name: this.currentRoute, query: { prefix } };
       }
     },
   },

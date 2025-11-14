@@ -95,10 +95,8 @@ export function deleteTag (event, tag, currentTags) {
 
 export function getPrefix(route) {
   // Get current pseudofolder prefix
-  if (route.query.prefix == undefined) {
-    return "";
-  }
-  return `${route.query.prefix}/`;
+  const p = route?.query?.prefix || "";
+  return p && !p.endsWith("/") ? `${p}/` : p;
 }
 
 export function getFolderName(folderName, route) {
