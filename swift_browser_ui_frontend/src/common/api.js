@@ -172,21 +172,15 @@ export async function getObjects(
   if (objects?.status == 200 && !signal?.aborted) {
     objects = await objects.json();
     for (let i = 0; i < objects.length; i++) {
+      objects[i].bytes = Number(objects[i].bytes || 0);
+
       if (shared) {
-        objects[i]["url"] = "/download/".concat(
-          encodeURI(project),
-          "/",
-          encodeURI(container),
-          "/",
-          encodeURI(objects[i]["name"]),
+        objects[i].url = "/download/".concat(
+          encodeURI(project), "/", encodeURI(container), "/", encodeURI(objects[i].name)
         );
       } else {
-        objects[i]["url"] = "/api/".concat(
-          encodeURI(project),
-          "/",
-          encodeURI(container),
-          "/",
-          encodeURI(objects[i]["name"]),
+        objects[i].url = "/api/".concat(
+          encodeURI(project), "/", encodeURI(container), "/", encodeURI(objects[i].name)
         );
       }
     }
@@ -346,33 +340,23 @@ export async function getSharedContainerAddress(project) {
   return ret.json();
 }
 
-export async function swiftCreateContainer(
-  project,
-  container,
-  tags,
-) {
-  // Create a container matching the specified name.
-  let fetchURL = new URL(
-    "/api/".concat(
-      encodeURI(project), "/",
-      encodeURI(container),
-    ),
+export async function swiftCreateContainer(project, container, tags = []) {
+  const url = new URL(
+    `/api/${encodeURI(project)}/${encodeURI(container)}`,
     document.location.origin,
   );
-  let body = {
-    tags,
-  };
-  let ret = await PUT(fetchURL, JSON.stringify(body));
-  if (ret.status != 201) {
-    if (ret.status == 409 || ret.status == 202) {
-      //name used in other projects or current
-      throw new Error("Container name already in use.");
-    }
-    if (ret.status == 400 || ret.status == 405) {
-      throw new Error("Invalid container or tag name.");
-    }
-    throw new Error("Container creation unsuccessful.");
-  }
+
+  // Try creating the container with tags first
+  let ret = await PUT(url, JSON.stringify({ tags }));
+  if ([200, 201, 202, 204].includes(ret.status)) return;
+
+  // If that fails, try without tags (older Swift versions)
+  ret = await PUT(url);
+  if ([200, 201, 202, 204].includes(ret.status)) return;
+
+  if (ret.status === 409) throw new Error("Container name already in use.");
+  if (ret.status === 400 || ret.status === 405) throw new Error("Invalid container or tag name.");
+  throw new Error(`Container creation unsuccessful (${ret.status}).`);
 }
 
 export async function swiftDeleteContainer(
@@ -612,4 +596,31 @@ export async function signedFetch(
   );
 
   return resp;
+}
+
+// Create an empty “folder” marker (zero-byte object ending with “/”).
+export async function swiftCreateEmptyObject(project, container, objectPath, owner) {
+  const name = objectPath.endsWith("/") ? objectPath : `${objectPath}/`;
+
+  const objectUrl = new URL(
+    `/api/${encodeURIComponent(project)}/${encodeURIComponent(container)}/${encodeURIComponent(name)}`,
+    document.location.origin
+  );
+
+  // If owner is specified, add it as a query parameter (for shared containers)
+  if (owner) objectUrl.searchParams.append("owner", owner);
+
+  const ret = await PUT(objectUrl, new Blob([]));
+
+  if ([200, 201, 202, 204, 409].includes(ret.status)) return;
+
+  // Friendly errors
+  if (ret.status === 401) throw new Error("Session expired. Please sign in again.");
+  if (ret.status === 403) throw new Error("You don’t have permission to create objects here.");
+  if (ret.status === 404) throw new Error("Container not found.");
+  if (ret.status === 405) throw new Error("Object PUT not enabled in this UI (405).");
+  if (ret.status === 413) throw new Error("Payload too large.");
+  if (ret.status === 429) throw new Error("Rate limited — please retry.");
+  if (ret.status >= 500) throw new Error("Storage backend error.");
+  throw new Error(`Object creation failed (${ret.status}).`);
 }

@@ -40,6 +40,7 @@ from swift_browser_ui.ui.api import (
     swift_get_project_metadata,
     swift_list_containers,
     swift_list_objects,
+    swift_put_object,
     swift_replicate_container,
     swift_update_container_metadata,
 )
@@ -264,6 +265,7 @@ async def servinit(
             aiohttp.web.get(
                 "/api/{project}/{container}/{object:.*}", swift_download_object
             ),
+            aiohttp.web.put("/api/{project}/{container}/{object:.*}", swift_put_object),
             aiohttp.web.post(
                 "/api/{project}/{container}", swift_update_container_metadata
             ),

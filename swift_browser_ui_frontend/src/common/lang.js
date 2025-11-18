@@ -221,6 +221,7 @@ let default_translations = {
           "can be downloaded.",
       },
       upload: {
+        addFiles: "Add files or folders first.",
         duplicate: "Files with the same paths are not allowed.",
         sizeZero: "Empty files cannot be uploaded.",
         hasStarted: "Uploading has started",
@@ -255,8 +256,12 @@ let default_translations = {
       tagPlaceholder: "# Add a tag and press enter",
       container_ops: {
         addContainer: "Create new folder",
+        createSuccess: "Folder created.",
+        createFail: "Folder creation failed.",
         norename:
           "Please note that folder names cannot be modified " +
+          "after creating a folder.",
+        subfoldername: "Please note that folder names cannot be modified " +
           "after creating a folder.",
         createdFolder:
           "Created folder will be shared with all project members in ",
@@ -274,6 +279,11 @@ let default_translations = {
       objects: {
         file: "File ",
         files: "Files ",
+        folder: "Folder",
+        folderName: "Folder name",
+        upOneLevel: "back to parent folder",
+        backToBuckets: "back to all buckets",
+        createFolder: "Create folder",
         overwriteConfirm: " already exists. Do you want to replace " +
         "this file? (Previous file will be lost.)",
         overwriteConfirmMany:
@@ -337,6 +347,7 @@ let default_translations = {
         },
         uploadedFiles:
           "Uploaded files will be shared with all project members in ",
+        unencryptedNotice: "Note this upload process is not suitable for sensitive data, In this case use",
         uploadedToShared:
           "and all members in other projects which " +
           "have access to this shared folder.",
@@ -767,6 +778,7 @@ let default_translations = {
           "tiedostot voivat kuitenkin olla tämän kokoisia ja ne voidaan ladata",
       },
       upload: {
+        addFiles: "Lisää ensin tiedostoja tai kansioita.",
         duplicate: "Tiedostot, joilla on samat polut, eivät ole sallittuja.",
         sizeZero: "Tyhjiä tiedostoja ei voi lähettää.",
         hasStarted: "Lähetys aloitettu",
@@ -803,6 +815,8 @@ let default_translations = {
       tagPlaceholder: "# Lisää asiasana ja paina rivinvaihtoa",
       container_ops: {
         addContainer: "Luo uusi kansio",
+        createSuccess: "Kansio luotu.",
+        createFail: "Kansion luonti epäonnistui.",
         norename:
           "Kansiota ei voi nimetä uudelleen, " +
           "mutta sen voi kopioida uudella nimellä.",
@@ -824,6 +838,8 @@ let default_translations = {
       objects: {
         file: "Tiedosto ",
         files: "Tiedostot ",
+        folder: "Kansio",
+        createFolder: "Luo kansio",
         overwriteConfirm:
           " on jo olemassa. Haluatko korvata tiedoston? " +
           "(Edellinen tiedosto poistetaan.)",
@@ -889,6 +905,8 @@ let default_translations = {
         },
         uploadedFiles:
           "Lähetetyt tiedostot jaetaan kaikille jäsenille projektissa ",
+        unencryptedNotice: "Huomaa, että tämä lähetysprosessi ei sovellu " +
+          "sensitiivisille tiedoille. Tällöin käytä",
         uploadedToShared:
           "ja myös kaikille jäsenille muissa projekteissa, " +
           "joilla on pääsy tähän jaettuun kansioon.",
