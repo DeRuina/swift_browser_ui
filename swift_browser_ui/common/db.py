@@ -102,7 +102,7 @@ class UploadDBConn(BaseDBConn):
             min_size=int(os.environ.get("UPLOAD_DB_MIN_CONNECTIONS", 1)),
             max_size=int(os.environ.get("UPLOAD_DB_MAX_CONNECTIONS", 10)),
             timeout=int(os.environ.get("UPLOAD_DB_TIMEOUT", 120)),
-            command_timeout=int(os.environ.get("UPLOAD_DB_COMMAND_TIMEOUT", 180)),
+            command_timeout=int(os.environ.get("UPLOAD_DB_COMMAND_TIMEOUT", 9)),
             max_inactive_connection_lifetime=int(
                 os.environ.get("UPLOAD_DB_MAX_INACTIVE_CONN_LIFETIME", 300)
             ),
