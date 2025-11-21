@@ -76,6 +76,7 @@ async def servinit() -> aiohttp.web.Application:
     app.on_startup.append(swift_browser_ui.common.common_util.read_in_keys)
     app.on_shutdown.append(kill_client)
     app.on_shutdown.append(swift_browser_ui.common.db.db_graceful_close)
+    app.on_cleanup.append(swift_browser_ui.common.db.db_graceful_close)
 
     # Add client session for aiohttp requests
     http_client = aiohttp.client.ClientSession()
