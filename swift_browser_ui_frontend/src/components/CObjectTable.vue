@@ -269,9 +269,19 @@ export default {
                     const isFolder = !!item?.subfolder;
                     const hasNonAscii = /[^\x20-\x7E]/.test(item.name);
                     const hasSpaceOrTab = /[ \t]/.test(item.name);
+                    const hasNonAsciiBucket = /[^\x20-\x7E]/.test(this.container);
+                    const hasSpaceOrTabBucket = /[ \t]/.test(this.container);
 
-                    if (isSharedRoute || this.isSharedContainer || isFolder ||
-                      hasNonAscii || hasSpaceOrTab) {
+                    const needsProxy =
+                      isSharedRoute ||
+                      this.isSharedContainer ||
+                      isFolder ||
+                      hasNonAscii ||
+                      hasSpaceOrTab ||
+                      hasNonAsciiBucket ||
+                      hasSpaceOrTabBucket;
+
+                    if (needsProxy) {
                       this.beginDownload(item, event.isTrusted); // proxy path
                     } else {
                       this.navDownload(item.url); // TempURL path
