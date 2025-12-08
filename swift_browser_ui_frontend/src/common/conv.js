@@ -70,7 +70,8 @@ export async function syncContainerACLs(store) {
 
   // Refresh current sharing information
   let currentsharing = await client.getShare(project);
-  // Prune stale shared user access entries from the database
+
+    // Prune stale entries
   for (let container of currentsharing) {
     let containerDetails = await client.getShareDetails(project, container);
     for (let detail of containerDetails) {
@@ -80,8 +81,9 @@ export async function syncContainerACLs(store) {
     }
   }
 
-  // Refresh current sharing information
+  // Refresh again
   currentsharing = await client.getShare(project);
+
   // Sync potential new shares into the sharing database
   for (let container of Object.keys(aclmeta)) {
     let currentdetails = [];
@@ -89,6 +91,10 @@ export async function syncContainerACLs(store) {
       currentdetails = await client.getShareDetails(project, container);
     }
     for (let share of Object.keys(aclmeta[container])) {
+      // skip self sharing
+      if (share === project) {
+        continue;
+      }
       if (check_duplicate(container, share, currentdetails)) {
         continue;
       }
