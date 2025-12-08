@@ -1,6 +1,5 @@
 """Container and object replication handlers using aiohttp."""
 
-import base64
 import logging
 import os
 import ssl
@@ -11,7 +10,6 @@ import aiohttp.web
 import certifi
 from aiohttp import ClientTimeout
 
-import swift_browser_ui.common.vault_client
 from swift_browser_ui.upload import common
 
 LOGGER = logging.getLogger(__name__)
@@ -35,7 +33,6 @@ class ObjectReplicationProxy:
         self,
         session: typing.Dict[str, typing.Any],
         client: aiohttp.client.ClientSession,
-        vault: swift_browser_ui.common.vault_client.VaultClient,
         project: str,
         container: str,
         source_project: str,
@@ -46,7 +43,6 @@ class ObjectReplicationProxy:
         """."""
         self.project = project
         self.container = container
-        self.vault = vault
 
         self.source_project = source_project
         self.source_container = source_container
@@ -262,42 +258,9 @@ class ObjectReplicationProxy:
                         )
                 LOGGER.debug(f"Uploaded manifest for {object_name}")
 
-            if ".c4gh" in object_name and self.project_name:
-                LOGGER.debug(f"Copying the header for encrypted object {object_name}")
-                header = await self.vault.get_header(
-                    self.project_name,
-                    self.source_container,
-                    object_name,
-                    owner=self.source_project_name,
-                )
-                await self.vault.put_header(
-                    self.project_name, self.container, object_name, header
-                )
-
-    async def check_public_key(self) -> None:
-        """Check that the source project public key is whitelisted."""
-        if self.project_name:
-            pubkey = await self.vault.get_public_key(self.project_name)
-            LOGGER.debug(
-                f"Add public key of {self.project_name} temporarily for re-encryption."
-            )
-            await self.vault.put_whitelist_key(
-                self.project_name, "crypt4gh", base64.urlsafe_b64decode(pubkey)
-            )
-
-    async def remove_public_key(self) -> None:
-        """Remove the project public key from whitelist if it's been added."""
-        if self.project_name:
-            await self.vault.remove_whitelist_key(self.project_name)
-
     async def a_copy_single_object(self, object_name: str) -> None:
         """Only copy a single object."""
-        await self.check_public_key()
-
-        try:
-            await self.a_copy_object(object_name)
-        finally:
-            await self.remove_public_key()
+        await self.a_copy_object(object_name)
 
     async def a_get_container_page(self, marker: str = "") -> list[str]:
         """Get a single page of objects from a container."""
@@ -338,10 +301,5 @@ class ObjectReplicationProxy:
             to_copy = to_copy + page
             page = await self.a_get_container_page(to_copy[-1])
 
-        await self.check_public_key()
-
-        try:
-            for obj in to_copy:
-                await self.a_copy_object(obj)
-        finally:
-            await self.remove_public_key()
+        for obj in to_copy:
+            await self.a_copy_object(obj)

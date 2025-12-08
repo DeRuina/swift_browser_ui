@@ -37,7 +37,6 @@ const store = createStore({
     requestClient: undefined,
     socket: undefined,
     isUploading: false,
-    encryptedFile: "",
     uploadProgress: undefined,
     uploadNotification: {
       visible: false,
@@ -50,8 +49,6 @@ const store = createStore({
       maximized: true,
     },
     downloadAbortReason: undefined,
-    uploadEndpoint: "",
-    pubkey: [],
     dropFiles: [],
     openConfirmRouteModal: false,
     routeTo: {},
@@ -112,9 +109,6 @@ const store = createStore({
       state.isUploading = false;
       if (!cancelled) state.isLoaderVisible = true;
     },
-    setEncryptedFile(state, file) {
-      state.encryptedFile = file;
-    },
     toggleUploadNotification(state, payload) {
       state.uploadNotification.visible = payload;
     },
@@ -157,9 +151,6 @@ const store = createStore({
     eraseDownloadProgress(state) {
       state.downloadProgress = undefined;
     },
-    setUploadEndpoint(state, endpoint) {
-      state.uploadEndpoint = endpoint;
-    },
     appendDropFiles(state, file) {
       state.dropFiles.push(file);
     },
@@ -175,12 +166,6 @@ const store = createStore({
     },
     eraseDropFiles(state) {
       state.dropFiles = [];
-    },
-    appendPubKey(state, key) {
-      state.pubkey.push(key);
-    },
-    erasePubKey(state) {
-      state.pubkey = [];
     },
     toggleConfirmRouteModal(state, payload) {
       state.openConfirmRouteModal = payload;

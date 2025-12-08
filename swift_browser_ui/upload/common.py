@@ -10,7 +10,6 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 
-VAULT_CLIENT = "vault_client"
 SEGMENTS_CONTAINER = "_segments"
 
 

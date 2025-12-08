@@ -72,29 +72,21 @@ async def get_upload_runner(
                 request.app["Log"].debug(resp)
                 if resp.status != 200:
                     services["swiftui-upload-runner"] = {"status": "Down"}
-                    services["vault"] = {"status": "Down"}
                     end = time.time() - start
                     performance["swiftui-upload-runner"] = {"time": end}
-                    performance["vault"] = {"time": end}
                 else:
                     status = await resp.json()
                     services["swiftui-upload-runner"] = status["upload-runner"]
-                    services["vault"] = status["vault-instance"]
                     performance["swiftui-upload-runner"] = {
                         "time": status["start-time"] - start
-                    }
-                    performance["vault"] = {
-                        "time": status["end-time"] - status["start-time"]
                     }
         else:
             services["swiftui-upload-runner"] = {"status": "Nonexistent"}
     except ServerDisconnectedError:
         _set_error_status(request, services, "swiftui-upload-runner")
-        _set_error_status(request, services, "vault")
     except Exception as e:
         request.app["Log"].info(f"Health failed for reason: {e}")
         _set_error_status(request, services, "swiftui-upload-runner")
-        _set_error_status(request, services, "vault")
 
 
 async def get_redis(

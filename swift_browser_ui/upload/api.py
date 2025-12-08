@@ -1,7 +1,6 @@
 """API handlers for swift-upload-runner."""
 
 import asyncio
-import base64
 import logging
 import os
 import time
@@ -11,9 +10,7 @@ import aiohttp.web
 import msgpack
 
 import swift_browser_ui.upload.cryptupload as cryptupload
-from swift_browser_ui.common.vault_client import VaultClient
 from swift_browser_ui.upload.common import (
-    VAULT_CLIENT,
     generate_download_url,
     get_download_host,
     get_session_id,
@@ -85,7 +82,6 @@ async def handle_replicate_container(
     replicator = ObjectReplicationProxy(
         request.app[session],
         request.app["client"],
-        request.app[VAULT_CLIENT],
         project,
         container,
         source_project,
@@ -121,7 +117,6 @@ async def handle_replicate_object(request: aiohttp.web.Request) -> aiohttp.web.R
     replicator = ObjectReplicationProxy(
         request.app[session],
         request.app["client"],
-        request.app[VAULT_CLIENT],
         project,
         container,
         source_project,
@@ -167,20 +162,6 @@ async def handle_post_object_options(
     return resp
 
 
-async def handle_upload_encrypted_object_options(
-    _: aiohttp.web.Request,
-) -> aiohttp.web.Response:
-    """Handle options for uploading an encrypted object."""
-    resp = aiohttp.web.Response(
-        headers={
-            "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-            "Access-Control-Max-Age": "84600",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-    )
-    return resp
-
-
 async def handle_download_shared_object_options(
     _: aiohttp.web.Request,
 ) -> aiohttp.web.Response:
@@ -193,20 +174,6 @@ async def handle_download_shared_object_options(
         }
     )
 
-    return resp
-
-
-async def handle_whitelist_options(
-    _: aiohttp.web.Request,
-) -> aiohttp.web.Response:
-    """Handle options for editing project whitelist."""
-    resp = aiohttp.web.Response(
-        headers={
-            "Access-Control-Allow-Methods": "GET, PUT, DELETE, OPTIONS",
-            "Access-Control-Max-Age": "84600",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-    )
     return resp
 
 
@@ -261,146 +228,12 @@ async def handle_upload_ws(
 async def handle_health_check(request: aiohttp.web.Request) -> aiohttp.web.Response:
     """Answer a service health check for the upload runner and vault client."""
     start_time = time.time()
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    try:
-        vault_status = await vault_client.get_sys_health()
-    except Exception:
-        vault_status = "Error"
     end_time = time.time()
 
     return aiohttp.web.json_response(
         {
             "upload-runner": {"status": "Ok"},
-            "vault-instance": {"status": vault_status},
             "start-time": start_time,
             "end-time": end_time,
         }
     )
-
-
-async def handle_project_key(request: aiohttp.web.Request) -> aiohttp.web.Response:
-    """Answer project specific encryption keys."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    # Skip creating public keys for x-project access
-    skip_create = "for" in request.query
-    public_key = await vault_client.get_public_key(project, skip_create=skip_create)
-
-    return aiohttp.web.Response(
-        text=public_key,
-    )
-
-
-async def handle_put_object_header(request: aiohttp.web.Request) -> aiohttp.web.Response:
-    """PUT the header of an object."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    container = request.match_info["container"]
-    obj = request.match_info["object_name"]
-
-    header = await request.read()
-    b64_header = base64.standard_b64encode(header).decode("ascii")
-
-    owner = ""
-    if "owner" in request.query:
-        owner = request.query["owner"]
-
-    await vault_client.put_header(project, container, obj, b64_header, owner)
-
-    return aiohttp.web.HTTPNoContent()
-
-
-async def handle_get_object_header(request: aiohttp.web.Request) -> aiohttp.web.Response:
-    """GET the header for an object."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    container = request.match_info["container"]
-    obj = request.match_info["object_name"]
-    owner = ""
-    if "owner" in request.query:
-        owner = request.query["owner"]
-    header = await vault_client.get_header(project, container, obj, owner)
-
-    return aiohttp.web.Response(
-        text=header,
-    )
-
-
-async def handle_project_whitelist(request: aiohttp.web.Request) -> aiohttp.web.Response:
-    """Whitelist a project's public key."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    flavor = request.query.get("flavor", "crypt4gh")
-    public_key = await request.read()
-
-    await vault_client.put_whitelist_key(project, flavor, public_key)
-
-    return aiohttp.web.HTTPNoContent()
-
-
-async def handle_delete_project_whitelist(
-    request: aiohttp.web.Request,
-) -> aiohttp.web.Response:
-    """Delete the project's whitelisted key."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    await vault_client.remove_whitelist_key(project)
-
-    return aiohttp.web.HTTPNoContent()
-
-
-async def handle_batch_add_sharing_whitelist(
-    request: aiohttp.web.Request,
-) -> aiohttp.web.Response:
-    """Add projects in sharing whitelist in batch."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    container = request.match_info["container"]
-
-    receivers = await request.json()
-
-    for receiver in receivers:
-        await vault_client.put_project_whitelist(
-            project,
-            receiver["name"],
-            container,
-            receiver["id"],
-        )
-
-    return aiohttp.web.HTTPNoContent()
-
-
-async def handle_batch_remove_sharing_whitelist(
-    request: aiohttp.web.Request,
-) -> aiohttp.web.Response:
-    """Remove projects from sharing whitelist in batch."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    container = request.match_info["container"]
-
-    receivers = await request.json()
-
-    for receiver in receivers:
-        await vault_client.remove_project_whitelist(
-            project,
-            receiver,
-            container,
-        )
-
-    return aiohttp.web.HTTPNoContent()
-
-
-async def handle_check_sharing_whitelist(
-    request: aiohttp.web.Request,
-) -> aiohttp.web.Response:
-    """Check if a project is in the sharing whitelist."""
-    vault_client: VaultClient = request.app[VAULT_CLIENT]
-    project = request.match_info["project"]
-    container = request.match_info["container"]
-    receiver = request.match_info["receiver"]
-
-    resp = await vault_client.get_project_whitelist(project, receiver, container)
-
-    if resp is not None:
-        return aiohttp.web.json_response(resp)
-    return aiohttp.web.HTTPNoContent()

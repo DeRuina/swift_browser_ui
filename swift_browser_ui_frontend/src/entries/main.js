@@ -22,7 +22,7 @@ import { vControl } from "@/common/csc-ui-vue-directive";
 
 // Project JS functions
 import { i18n } from "@/common/i18n";
-import { getUser, signedFetch } from "@/common/api";
+import { getUser} from "@/common/api";
 import { getProjects } from "@/common/api";
 
 // Import SharingView and Request API
@@ -290,22 +290,6 @@ const app = createApp({
           ),
         );
       }
-      if (discovery.upload_endpoint) {
-        this.$store.commit(
-          "setUploadEndpoint",
-          discovery.upload_endpoint,
-        );
-
-        let key = await signedFetch(
-          "GET",
-          discovery.upload_endpoint,
-          `/cryptic/${this.active.name}/keys`,
-        );
-        key = await key.text();
-        key = `-----BEGIN CRYPT4GH PUBLIC KEY-----\n${key}\n-----END CRYPT4GH PUBLIC KEY-----\n`;
-        this.$store.commit("appendPubKey", key);
-      }
-
       this.initSocket().then(
         () => {if (DEV) console.log("Initialized the websocket.");},
       );
