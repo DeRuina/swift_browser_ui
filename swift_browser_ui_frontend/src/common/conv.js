@@ -23,15 +23,24 @@ function check_duplicate(container, share, currentdetails) {
 }
 
 function check_acl_mismatch(acl_cur, acl_sharing) {
-  // Check if the ACLs mismatch
-  if (
-    !("read" in acl_sharing && acl_cur.access.includes("r")) ||
-    !("write" in acl_sharing && acl_cur.access.includes("w"))
-  ) {
-    return true;
-  }
-  return false;
+  // Check if access detail entry has ACL mismatch
+  const dbAccess = acl_cur.access || [];
+  const dbHasRead = dbAccess.includes("r");
+  const dbHasWrite = dbAccess.includes("w");
+
+  const aclHasRead = !!acl_sharing.read;
+  const aclHasWrite = !!acl_sharing.write;
+
+  // read
+  const readMismatch = dbHasRead && !aclHasRead;
+
+  // write
+  const writeMismatch = dbHasWrite !== aclHasWrite;
+
+  return readMismatch || writeMismatch;
 }
+
+
 
 function check_stale(detail, access) {
   // Check if access detail entry has become stale
@@ -83,6 +92,19 @@ export async function syncContainerACLs(store) {
 
   // Refresh again
   currentsharing = await client.getShare(project);
+
+  // Remove self-shares
+  for (let container of currentsharing) {
+    const details = await client.getShareDetails(project, container);
+
+    const hasSelfShare = details.some(
+      (detail) => detail.sharedTo === project,
+    );
+
+    if (hasSelfShare) {
+      await client.shareDeleteAccess(project, container, [project]);
+    }
+  }
 
   // Sync potential new shares into the sharing database
   for (let container of Object.keys(aclmeta)) {
