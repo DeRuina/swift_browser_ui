@@ -213,16 +213,29 @@ export default class UploadSocket {
 
   // Build the proxy download URL
   buildProxyUrl(container, objectName, owner) {
-  const projectParam = this.active.id;
-  const projectPath = owner || this.active.id;
+    const projectParam = this.active.id;
+    const projectPath = owner || this.active.id;
 
-  const url = new URL(
-    `/download/${encodeURIComponent(projectPath)}/${encodeURIComponent(container)}/${encodeURIComponent(objectName)}`,
-    document.location.origin,
-  );
-  url.searchParams.set("project", projectParam);
-  return url.toString();
-}
+    const url = new URL(
+      `/download/${encodeURIComponent(projectPath)}/${encodeURIComponent(container)}/${encodeURIComponent(objectName)}`,
+      document.location.origin,
+    );
+    url.searchParams.set("project", projectParam);
+    return url.toString();
+  }
+
+  // Initialize download UI state
+  beginDownloadUI() {
+    if (this.$store.state.downloadCount <= 0) {
+      this.$store.commit("eraseDownloadProgress");
+    }
+    this.$store.commit("addDownload");
+    if (this.$store.state.downloadProgress === undefined) {
+      this.$store.commit("updateDownloadProgress", 0);
+    }
+    this.$store.commit("toggleDownloadNotification", true);
+  }
+
 
 
   // Open the websocket for runner communication
@@ -302,16 +315,6 @@ export default class UploadSocket {
       ownerName = ids.name;
     }
 
-    // Update download notification state
-    if (this.$store.state.downloadCount <= 0) {
-      this.$store.commit("eraseDownloadProgress");
-    }
-    this.$store.commit("addDownload");
-    if (this.$store.state.downloadProgress === undefined) {
-      this.$store.commit("updateDownloadProgress", 0);
-    }
-
-
     // Resolve selected object records (name, url, bytes) from IndexedDB
     const dbObjects = await this.resolveDownloadObjects(container, objects, owner);
 
@@ -342,7 +345,12 @@ export default class UploadSocket {
               },
             ];
           }
-          fileHandle = await window.showSaveFilePicker(opts);
+          try {
+            fileHandle = await window.showSaveFilePicker(opts);
+          } catch (err) {
+            return;
+          }
+          this.beginDownloadUI();
         }
         this.downWorker.postMessage({
           command: "downloadFile",
@@ -388,17 +396,21 @@ export default class UploadSocket {
           fileHandle =
             await testDirHandle.getFileHandle(fileName, { create: true });
         } else {
-          fileHandle = await window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [
-              {
-                description: "Tar archive (uncompressed)",
-                accept: {
-                  "application/x-tar": [".tar"],
+          try {
+            fileHandle = await window.showSaveFilePicker({
+              suggestedName: fileName,
+              types: [
+                {
+                  description: "Tar archive (uncompressed)",
+                  accept: {
+                    "application/x-tar": [".tar"],
+                  },
                 },
-              },
-            ],
-          });
+              ],
+            });} catch (err) {
+            return;
+          }
+          this.beginDownloadUI();
         }
         this.downWorker.postMessage({
           command: "downloadFiles",
