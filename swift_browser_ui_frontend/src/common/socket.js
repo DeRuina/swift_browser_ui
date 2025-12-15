@@ -130,10 +130,10 @@ export default class UploadSocket {
           break;
         case "abort":
           this.$store.commit("setDownloadAbortReason", e.data.reason);
-          if (!this.useServiceWorker) {
-            this.$store.commit("removeDownload", true);
-            this.$store.commit("eraseDownloadProgress");
-          }
+          this.$store.commit("removeDownload", true);
+          this.$store.commit("eraseDownloadProgress");
+          this.$store.commit("toggleDownloadNotification", false);
+          if (this.useServiceWorker) this.downloadFinished = true;
           break;
         case "progress":
           this.$store.commit("updateDownloadProgress", e.data.progress);
@@ -147,16 +147,17 @@ export default class UploadSocket {
           if (!this.useServiceWorker) {
             if (this.$store.state.downloadCount === 1) {
               this.$store.commit("updateDownloadProgress", 1);
-              this.downWorker.postMessage({
-                command: "clear",
-              });
-              if (DEV) {
-                console.log("Clearing download progress interval");
-              }
+              this.downWorker.postMessage({ command: "clear" });
             }
-            this.$store.commit("removeDownload");
           }
-          else {
+
+          this.$store.commit("removeDownload");
+
+          if (this.$store.state.downloadCount <= 0) {
+            this.$store.commit("toggleDownloadNotification", false);
+          }
+
+          if (this.useServiceWorker) {
             this.downloadFinished = true;
           }
           break;
@@ -209,6 +210,19 @@ export default class UploadSocket {
 
     return dbObjects;
   }
+
+  // Build the proxy download URL
+  buildProxyUrl(container, objectName, owner) {
+  const projectParam = this.active.id;
+  const projectPath = owner || this.active.id;
+
+  const url = new URL(
+    `/download/${encodeURIComponent(projectPath)}/${encodeURIComponent(container)}/${encodeURIComponent(objectName)}`,
+    document.location.origin,
+  );
+  url.searchParams.set("project", projectParam);
+  return url.toString();
+}
 
 
   // Open the websocket for runner communication
@@ -288,6 +302,16 @@ export default class UploadSocket {
       ownerName = ids.name;
     }
 
+    // Update download notification state
+    if (this.$store.state.downloadCount <= 0) {
+      this.$store.commit("eraseDownloadProgress");
+    }
+    this.$store.commit("addDownload");
+    if (this.$store.state.downloadProgress === undefined) {
+      this.$store.commit("updateDownloadProgress", 0);
+    }
+
+
     // Resolve selected object records (name, url, bytes) from IndexedDB
     const dbObjects = await this.resolveDownloadObjects(container, objects, owner);
 
@@ -326,7 +350,7 @@ export default class UploadSocket {
           container: container,
           file: {
             path: obj.name,
-            url: obj.url,
+            url:  this.buildProxyUrl(container, obj.name, owner),
             size: obj.bytes,
           },
           handle: fileHandle,
@@ -345,7 +369,7 @@ export default class UploadSocket {
             container: container,
             file: {
               path: obj.name,
-              url: obj.url,
+              url: this.buildProxyUrl(container, obj.name, owner),
               size: obj.bytes,
             },
             owner: owner,
@@ -382,7 +406,7 @@ export default class UploadSocket {
           container: container,
           files: dbObjects.map(obj => ({
               path: obj.name,
-              url: obj.url,
+              url: this.buildProxyUrl(container, obj.name, owner),
               size: obj.bytes,
           })),
           handle: fileHandle,
@@ -398,7 +422,7 @@ export default class UploadSocket {
             container: container,
             files: dbObjects.map(obj => ({
               path: obj.name,
-              url: obj.url,
+              url: this.buildProxyUrl(container, obj.name, owner),
               size: obj.bytes,
             })),
             owner: owner,
