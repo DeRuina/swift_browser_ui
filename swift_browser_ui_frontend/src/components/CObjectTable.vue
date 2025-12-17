@@ -271,6 +271,8 @@ export default {
                     const hasSpaceOrTab = /[ \t]/.test(item.name);
                     const hasNonAsciiBucket = /[^\x20-\x7E]/.test(this.container);
                     const hasSpaceOrTabBucket = /[ \t]/.test(this.container);
+                    const needsEncodingName = encodeURIComponent(item.name) !== item.name;
+                    const needsEncodingBucket = encodeURIComponent(this.container) !== this.container;
 
                     const needsProxy =
                       isSharedRoute ||
@@ -279,7 +281,9 @@ export default {
                       hasNonAscii ||
                       hasSpaceOrTab ||
                       hasNonAsciiBucket ||
-                      hasSpaceOrTabBucket;
+                      hasSpaceOrTabBucket ||
+                      needsEncodingName ||
+                      needsEncodingBucket;
 
                     if (needsProxy) {
                       this.beginDownload(item, event.isTrusted); // proxy path
