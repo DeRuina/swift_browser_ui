@@ -92,7 +92,7 @@ export default class UploadSocket {
       switch(e.data.eventType) {
         case "downloadStarted":
           if (this.useServiceWorker) {
-            document.querySelector("#container-error-toasts")?.addToast({
+            document.querySelector("#download-start-toasts")?.addToast({
               id: `download-started-${Date.now()}`,
               type: "success",
               message: this.$t("message.download.startedInBrowser"),

@@ -108,6 +108,11 @@
         vertical="top"
         horizontal="center"
       />
+       <c-toasts
+        id="download-start-toasts"
+        vertical="bottom"
+        horizontal="center"
+      />
     </div>
     <CFooter />
   </div>
