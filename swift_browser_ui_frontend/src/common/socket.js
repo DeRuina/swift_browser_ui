@@ -225,12 +225,12 @@ export default class UploadSocket {
   }
 
   // Initialize download UI state
-  beginDownloadUI({ setProgress = true } = {})  {
+  beginDownloadUI()  {
     if (this.$store.state.downloadCount <= 0) {
       this.$store.commit("eraseDownloadProgress");
     }
     this.$store.commit("addDownload");
-    if (setProgress && this.$store.state.downloadProgress === undefined) {
+    if (this.$store.state.downloadProgress === undefined) {
       this.$store.commit("updateDownloadProgress", 0);
     }
     this.$store.commit("toggleDownloadNotification", true);
@@ -370,7 +370,6 @@ export default class UploadSocket {
         if (DEV) {
           console.log("Instructing ServiceWorker to add a file to downloads.");
         }
-        this.beginDownloadUI({ setProgress: false });
         navigator.serviceWorker.ready.then(reg => {
           reg.active.postMessage({
             command: "downloadFile",
@@ -428,7 +427,6 @@ export default class UploadSocket {
           test: test,
         });
       } else {
-        this.beginDownloadUI({ setProgress: false });
         navigator.serviceWorker.ready.then(reg => {
           reg.active.postMessage({
             command: "downloadFiles",
