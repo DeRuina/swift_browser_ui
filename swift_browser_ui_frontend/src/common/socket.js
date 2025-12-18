@@ -97,6 +97,9 @@ export default class UploadSocket {
             );
           }
           if (this.useServiceWorker) {
+            if (this.$store.state.downloadProgress === undefined) {
+              this.$store.commit("updateDownloadProgress", 0);
+            }
             this.downloadFinished = false;
             if (e.data.archive) {
               let downloadUrl = new URL(
@@ -152,6 +155,7 @@ export default class UploadSocket {
           }
           else {
             this.downloadFinished = true;
+            this.$store.commit("updateDownloadProgress", 1);
           }
 
           this.$store.commit("removeDownload");
