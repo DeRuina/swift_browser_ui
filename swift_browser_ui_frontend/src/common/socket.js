@@ -150,16 +150,12 @@ export default class UploadSocket {
               this.downWorker.postMessage({ command: "clear" });
             }
           }
+          else {
+            this.downloadFinished = true;
+          }
 
           this.$store.commit("removeDownload");
 
-          if (this.$store.state.downloadCount <= 0) {
-            this.$store.commit("toggleDownloadNotification", false);
-          }
-
-          if (this.useServiceWorker) {
-            this.downloadFinished = true;
-          }
           break;
       }
     };
@@ -225,12 +221,12 @@ export default class UploadSocket {
   }
 
   // Initialize download UI state
-  beginDownloadUI() {
+  beginDownloadUI({ setProgress = true } = {})  {
     if (this.$store.state.downloadCount <= 0) {
       this.$store.commit("eraseDownloadProgress");
     }
     this.$store.commit("addDownload");
-    if (this.$store.state.downloadProgress === undefined) {
+    if (setProgress && this.$store.state.downloadProgress === undefined) {
       this.$store.commit("updateDownloadProgress", 0);
     }
     this.$store.commit("toggleDownloadNotification", true);
@@ -370,6 +366,7 @@ export default class UploadSocket {
         if (DEV) {
           console.log("Instructing ServiceWorker to add a file to downloads.");
         }
+        this.beginDownloadUI({ setProgress: false });
         navigator.serviceWorker.ready.then(reg => {
           reg.active.postMessage({
             command: "downloadFile",
@@ -427,6 +424,7 @@ export default class UploadSocket {
           test: test,
         });
       } else {
+        this.beginDownloadUI({ setProgress: false });
         navigator.serviceWorker.ready.then(reg => {
           reg.active.postMessage({
             command: "downloadFiles",
