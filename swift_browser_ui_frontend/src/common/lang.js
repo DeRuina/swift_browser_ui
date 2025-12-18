@@ -202,6 +202,7 @@ let default_translations = {
       containerFolder: "Folders",
       containerBucket: "Buckets",
       download: {
+        startedInBrowser: "Download started in your browser.",
         download: " Download",
         files: "Files can only be downloaded " +
           "individually because there are file or subfolder names longer " +
@@ -761,6 +762,7 @@ let default_translations = {
       containerFolder: "Kansiot",
       containerBucket: "Ämpärit",
       download: {
+        startedInBrowser: "Lataus on alkanut selaimessasi.",
         download: " Lataa",
         files: "Tiedostot voidaan ladata vain " +
           "erikseen, koska tiedostojen tai alikansioiden nimet ovat " +
