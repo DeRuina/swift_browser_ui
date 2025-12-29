@@ -74,6 +74,8 @@ const store = createStore({
     sharingUpdated: false,
     sharingContainers: [],
     sharedContainers: [],
+    downloadStartedToastVisible: false,
+
   },
   mutations: {
     setProjects(state, newProjects) {
@@ -122,6 +124,9 @@ const store = createStore({
     toggleDownloadNotificationSize(state) {
       state.downloadNotification.maximized =
         !state.downloadNotification.maximized;
+    },
+    toggleDownloadStartedToast(state, val) {
+      state.downloadStartedToastVisible = val;
     },
     updateProgress(state, progress) {
       state.uploadProgress = progress;

@@ -92,15 +92,11 @@ export default class UploadSocket {
       switch(e.data.eventType) {
         case "downloadStarted":
           if (this.useServiceWorker) {
-            document.querySelector("#download-start-toasts")?.addToast({
-              id: `download-started-${Date.now()}`,
-              type: "success",
-              message: this.$t("message.download.startedInBrowser"),
-              duration: 4000,
-              persistent: false,
-            });
+            this.$store.commit("toggleDownloadStartedToast", true);
+            setTimeout(() => {
+              this.$store.commit("toggleDownloadStartedToast", false);
+            }, 4000);
           }
-
           if (DEV) {
             console.log(
               `Started downloading in container ${e.data.container}`,

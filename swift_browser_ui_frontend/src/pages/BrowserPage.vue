@@ -89,6 +89,7 @@
         type="download"
         @cancel-download="cancelDownload"
       />
+      <DownloadStartedToast v-if="$store.state.downloadStartedToastVisible" />
       <router-view class="content-wrapper" />
       <c-toasts
         id="copyFolder-toasts"
@@ -106,11 +107,6 @@
       <c-toasts
         id="container-error-toasts"
         vertical="top"
-        horizontal="center"
-      />
-       <c-toasts
-        id="download-start-toasts"
-        vertical="bottom"
         horizontal="center"
       />
     </div>

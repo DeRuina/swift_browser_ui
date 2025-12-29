@@ -41,6 +41,8 @@ import "@/css/prod.scss";
 
 // Upload and direct download notification handler
 import ProgressNotification from "@/components/ProgressNotification.vue";
+import DownloadStartedToast from "@/components/DownloadStartedToast.vue";
+
 
 //Custom footer element
 import CFooter from "@/components/CFooter.vue";
@@ -91,6 +93,7 @@ const app = createApp({
     CopyFolderModal,
     DeleteModal,
     TokenModal,
+    DownloadStartedToast,
   },
   data: function () {
     return {
