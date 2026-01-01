@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@intlify/shared': 9.14.5
+  '@intlify/shared': 11.2.8
   '@intlify/message-compiler': 9.14.5
   '@intlify/core-base': 9.14.5
 
@@ -17,8 +17,8 @@ importers:
         specifier: 9.14.5
         version: 9.14.5
       '@intlify/shared':
-        specifier: 9.14.5
-        version: 9.14.5
+        specifier: 11.2.8
+        version: 11.2.8
       '@intlify/unplugin-vue-i18n':
         specifier: ^6.0.0
         version: 6.0.8(@vue/compiler-dom@3.5.18)(eslint@9.33.0)(rollup@4.46.3)(typescript@5.9.2)(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))
@@ -549,8 +549,8 @@ packages:
     resolution: {integrity: sha512-IHzgEu61/YIpQV5Pc3aRWScDcnFKWvQA9kigcINcCBXN8mbW+vk9SK+lDxA6STzKQsVJxUPg9ACC52pKKo3SVQ==}
     engines: {node: '>= 16'}
 
-  '@intlify/shared@9.14.5':
-    resolution: {integrity: sha512-9gB+E53BYuAEMhbCAxVgG38EZrk59sxBtv3jSizNL2hEWlgjBjAw1AwpLHtNaeda12pe6W20OGEa0TwuMSRbyQ==}
+  '@intlify/shared@11.2.8':
+    resolution: {integrity: sha512-l6e4NZyUgv8VyXXH4DbuucFOBmxLF56C/mqh2tvApbzl2Hrhi1aTDcuv5TKdxzfHYmpO3UB0Cz04fgDT9vszfw==}
     engines: {node: '>= 16'}
 
   '@intlify/unplugin-vue-i18n@6.0.8':
@@ -570,7 +570,7 @@ packages:
     resolution: {integrity: sha512-w0+70CvTmuqbskWfzeYhn0IXxllr6mU+IeM2MU0M+j9OW64jkrvqY+pYFWrUnIIC9bEdij3NICruicwd5EgUuQ==}
     engines: {node: '>= 18'}
     peerDependencies:
-      '@intlify/shared': 9.14.5
+      '@intlify/shared': 11.2.8
       '@vue/compiler-dom': ^3.0.0
       vue: ^3.0.0
       vue-i18n: ^9.0.0 || ^10.0.0 || ^11.0.0
@@ -3565,6 +3565,7 @@ packages:
   vue-i18n@9.14.5:
     resolution: {integrity: sha512-0jQ9Em3ymWngyiIkj0+c/k7WgaPO+TNzjKSNq9BvBQaKJECqn9cd9fL4tkDhB5G1QBskGl9YxxbDAhgbFtpe2g==}
     engines: {node: '>= 16'}
+    deprecated: v9 and v10 no longer supported. please migrate to v11. about maintenance status, see https://vue-i18n.intlify.dev/guide/maintenance.html
     peerDependencies:
       vue: ^3.0.0
 
@@ -4112,7 +4113,7 @@ snapshots:
   '@intlify/bundle-utils@10.0.1(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))':
     dependencies:
       '@intlify/message-compiler': 9.14.5
-      '@intlify/shared': 9.14.5
+      '@intlify/shared': 11.2.8
       acorn: 8.15.0
       escodegen: 2.1.0
       estree-walker: 2.0.2
@@ -4126,21 +4127,21 @@ snapshots:
   '@intlify/core-base@9.14.5':
     dependencies:
       '@intlify/message-compiler': 9.14.5
-      '@intlify/shared': 9.14.5
+      '@intlify/shared': 11.2.8
 
   '@intlify/message-compiler@9.14.5':
     dependencies:
-      '@intlify/shared': 9.14.5
+      '@intlify/shared': 11.2.8
       source-map-js: 1.2.1
 
-  '@intlify/shared@9.14.5': {}
+  '@intlify/shared@11.2.8': {}
 
   '@intlify/unplugin-vue-i18n@6.0.8(@vue/compiler-dom@3.5.18)(eslint@9.33.0)(rollup@4.46.3)(typescript@5.9.2)(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))':
     dependencies:
       '@eslint-community/eslint-utils': 4.7.0(eslint@9.33.0)
       '@intlify/bundle-utils': 10.0.1(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))
-      '@intlify/shared': 9.14.5
-      '@intlify/vue-i18n-extensions': 8.0.0(@intlify/shared@9.14.5)(@vue/compiler-dom@3.5.18)(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))
+      '@intlify/shared': 11.2.8
+      '@intlify/vue-i18n-extensions': 8.0.0(@intlify/shared@11.2.8)(@vue/compiler-dom@3.5.18)(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))
       '@rollup/pluginutils': 5.2.0(rollup@4.46.3)
       '@typescript-eslint/scope-manager': 8.39.1
       '@typescript-eslint/typescript-estree': 8.39.1(typescript@5.9.2)
@@ -4162,11 +4163,11 @@ snapshots:
       - supports-color
       - typescript
 
-  '@intlify/vue-i18n-extensions@8.0.0(@intlify/shared@9.14.5)(@vue/compiler-dom@3.5.18)(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))':
+  '@intlify/vue-i18n-extensions@8.0.0(@intlify/shared@11.2.8)(@vue/compiler-dom@3.5.18)(vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)))(vue@3.5.18(typescript@5.9.2))':
     dependencies:
       '@babel/parser': 7.28.3
     optionalDependencies:
-      '@intlify/shared': 9.14.5
+      '@intlify/shared': 11.2.8
       '@vue/compiler-dom': 3.5.18
       vue: 3.5.18(typescript@5.9.2)
       vue-i18n: 9.14.5(vue@3.5.18(typescript@5.9.2))
@@ -4883,17 +4884,17 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
 
-  '@webpack-cli/configtest@2.1.1(webpack-cli@5.1.4(webpack@5.101.2))(webpack@5.101.2(webpack-cli@5.1.4))':
+  '@webpack-cli/configtest@2.1.1(webpack-cli@5.1.4)(webpack@5.101.2)':
     dependencies:
       webpack: 5.101.2(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.101.2)
 
-  '@webpack-cli/info@2.0.2(webpack-cli@5.1.4(webpack@5.101.2))(webpack@5.101.2(webpack-cli@5.1.4))':
+  '@webpack-cli/info@2.0.2(webpack-cli@5.1.4)(webpack@5.101.2)':
     dependencies:
       webpack: 5.101.2(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.101.2)
 
-  '@webpack-cli/serve@2.0.5(webpack-cli@5.1.4(webpack@5.101.2))(webpack@5.101.2(webpack-cli@5.1.4))':
+  '@webpack-cli/serve@2.0.5(webpack-cli@5.1.4)(webpack@5.101.2)':
     dependencies:
       webpack: 5.101.2(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.101.2)
@@ -7343,7 +7344,7 @@ snapshots:
 
   tapable@2.2.2: {}
 
-  terser-webpack-plugin@5.3.14(webpack@5.101.2(webpack-cli@5.1.4)):
+  terser-webpack-plugin@5.3.14(webpack@5.101.2):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.30
       jest-worker: 27.5.1
@@ -7505,7 +7506,7 @@ snapshots:
   vue-i18n@9.14.5(vue@3.5.18(typescript@5.9.2)):
     dependencies:
       '@intlify/core-base': 9.14.5
-      '@intlify/shared': 9.14.5
+      '@intlify/shared': 11.2.8
       '@vue/devtools-api': 6.6.4
       vue: 3.5.18(typescript@5.9.2)
 
@@ -7541,9 +7542,9 @@ snapshots:
   webpack-cli@5.1.4(webpack@5.101.2):
     dependencies:
       '@discoveryjs/json-ext': 0.5.7
-      '@webpack-cli/configtest': 2.1.1(webpack-cli@5.1.4(webpack@5.101.2))(webpack@5.101.2(webpack-cli@5.1.4))
-      '@webpack-cli/info': 2.0.2(webpack-cli@5.1.4(webpack@5.101.2))(webpack@5.101.2(webpack-cli@5.1.4))
-      '@webpack-cli/serve': 2.0.5(webpack-cli@5.1.4(webpack@5.101.2))(webpack@5.101.2(webpack-cli@5.1.4))
+      '@webpack-cli/configtest': 2.1.1(webpack-cli@5.1.4)(webpack@5.101.2)
+      '@webpack-cli/info': 2.0.2(webpack-cli@5.1.4)(webpack@5.101.2)
+      '@webpack-cli/serve': 2.0.5(webpack-cli@5.1.4)(webpack@5.101.2)
       colorette: 2.0.20
       commander: 10.0.1
       cross-spawn: 7.0.6
@@ -7589,7 +7590,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.2
-      terser-webpack-plugin: 5.3.14(webpack@5.101.2(webpack-cli@5.1.4))
+      terser-webpack-plugin: 5.3.14(webpack@5.101.2)
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     optionalDependencies:
