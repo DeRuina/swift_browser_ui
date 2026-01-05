@@ -93,7 +93,6 @@ export default {
       loadingFoldername: true,
       tags: [],
       folders: [],
-      checkpointsCompleted: 0,
       errorMsg: "",
     };
   },
@@ -128,13 +127,6 @@ export default {
     folderName() {
       if (this.folderName) {
         this.checkValidity();
-      }
-    },
-    checkpointsCompleted() {
-      if (this.checkpointsCompleted > 1) {
-        this.$store.commit("setFolderCopiedStatus", true);
-        document.querySelector("#copyFolder-toasts")
-          .removeToast("copy-in-progress");
       }
     },
   },
@@ -202,7 +194,6 @@ export default {
       this.tags = [];
       this.loadingFoldername = true;
       this.errorMsg = "";
-      document.querySelector("#copyFolder-toasts").removeToast("copy-error");
 
       /*
         Prev Active element is a popup menu and it is removed from DOM
@@ -223,15 +214,6 @@ export default {
     a_replicate_container: async function (keypress) {
       if (this.errorMsg.length) return;
       this.$store.commit("toggleCopyFolderModal", false);
-      document.querySelector("#copyFolder-toasts").addToast(
-        {
-          id: "copy-in-progress",
-          type: "success",
-          indeterminate: true,
-          message: "",
-          custom: true,
-        },
-      );
 
       // Fetch the source project id if it exists
       let sourceProjectName = "";
@@ -243,72 +225,26 @@ export default {
       }
 
       // Initiate the container replication operation
-      await swiftCopyContainer(
-        this.active.id,
-        this.folderName,
-        this.sourceProjectId ? this.sourceProjectId : this.active.id,
-        this.selectedFolderName,
-        this.active.name,
-        sourceProjectName,
-      ).then(async () => {
-        await this.$store.dispatch("updateContainers", {
-          projectID: this.$route.params.project,
-          signal: null,
-        });
-
-        this.checkpointsCompleted = 0;
-
-        const tags = toRaw(this.tags);
-        let metadata = {
-          usertags: tags.join(";"),
-        };
-        delay((id, folder, meta, tgs) => {
-          updateContainerMeta(id, folder, meta)
-            .then(
-              async () => {
-                await getDB().containers
-                  .where({
-                    projectID: id,
-                    name: folder,
-                  })
-                  .modify({ tgs });
-              },
-            );
-
-          this.checkpointsCompleted++;
-        }, 5000, this.active.id, this.folderName, metadata, tags);
-
-        getObjects(
+      try {
+        const { job_id } = await swiftCopyContainer(
+          this.active.id,
+          this.folderName,
           this.sourceProjectId ? this.sourceProjectId : this.active.id,
           this.selectedFolderName,
-        ).then(async (objects) => {
-          const sleep =
-            time => new Promise(resolve => setTimeout(resolve, time));
-
-          let copiedObjects = undefined;
-          while (copiedObjects === undefined ||
-            copiedObjects.length < objects.length) {
-            const task = getObjects(this.active.id, this.folderName)
-              .then((obj) => copiedObjects = obj );
-
-            await Promise.all([task, sleep(2000)]);
-          }
-
-          this.checkpointsCompleted++;
-          this.cancelCopy(keypress);
-        });
-      }).catch(() => {
-        document.querySelector("#copyFolder-toasts").addToast(
-          {
-            id: "copy-error",
-            type: "error",
-            duration: 5000,
-            persistent: false,
-            progress: false,
-            message: this.$t("message.copyfail"),
-          },
+          this.active.name,
+          sourceProjectName,
         );
-      });
+
+        this.$store.dispatch("startCopyJob", {
+          jobId: job_id,
+          projectId: this.active.id,
+          label: `${this.selectedFolderName} → ${this.folderName}`,
+        });
+
+        this.cancelCopy(keypress);
+      } catch (e) {
+        this.errorMsg = this.$t("message.copyfail");
+      }
     },
     addingTag: function (e, onBlur) {
       this.tags = addNewTag(e, this.tags, onBlur);

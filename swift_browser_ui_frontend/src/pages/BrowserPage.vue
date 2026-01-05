@@ -90,20 +90,8 @@
         @cancel-download="cancelDownload"
       />
       <DownloadStartedToast v-if="$store.state.downloadStartedToastVisible" />
+      <CopyProgressToast v-if="Object.keys($store.state.copyJobs).length" />
       <router-view class="content-wrapper" />
-      <c-toasts
-        id="copyFolder-toasts"
-        vertical="top"
-      >
-        <div class="toasts-wrapper">
-          <h5 class="title is-5">
-            {{ $t("message.copysuccess") }}
-          </h5>
-          <p class="has-text-weight-semibold">
-            {{ $t("message.copytime") }}
-          </p>
-        </div>
-      </c-toasts>
       <c-toasts
         id="container-error-toasts"
         vertical="top"
@@ -270,15 +258,6 @@ c-modal {
   margin: 0 1%;
   padding: 0;
   border-radius: 6px;
-}
-
-#copyFolder-toasts {
-  position: sticky;
-  bottom: 30vh;
-}
-
-.toasts-wrapper {
-  padding: 1rem;
 }
 
 .taginput-label {

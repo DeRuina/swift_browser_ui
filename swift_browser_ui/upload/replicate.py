@@ -1,5 +1,6 @@
 """Container and object replication handlers using aiohttp."""
 
+import asyncio
 import logging
 import os
 import ssl
@@ -24,6 +25,11 @@ ssl_context.load_verify_locations(certifi.where())
 # process, as the segments can be up to 5 GiB in size.
 # The new value is approx 4.5 hours.
 REPL_TIMEOUT = 16384
+
+
+def _is_cancelled(app, job_id: str) -> bool:
+    job = app["replication_jobs"].get(job_id) if app else None
+    return (job is None) or job.get("cancel", False)
 
 
 class ObjectReplicationProxy:
@@ -90,8 +96,11 @@ class ObjectReplicationProxy:
 
         LOGGER.info(f"Created container '{container}'.")
 
-    async def a_sync_object_segments(self, manifest: str) -> str:
+    async def a_sync_object_segments(self, manifest: str, job_id: str, app) -> str:
         """Get object segments."""
+        if _is_cancelled(app, job_id):
+            raise asyncio.CancelledError()
+
         async with self.client.get(
             common.generate_download_url(
                 self.source_host, container=manifest.split("/")[0]
@@ -123,6 +132,8 @@ class ObjectReplicationProxy:
         LOGGER.debug(f"Got following segments: {segments}")
 
         for segment in segments:
+            if _is_cancelled(app, job_id):
+                raise asyncio.CancelledError()
             from_url = common.generate_download_url(
                 self.source_host, container=manifest.split("/")[0], object_name=segment
             )
@@ -152,6 +163,8 @@ class ObjectReplicationProxy:
                         reason="ETag missing, maybe segments file empty"
                     )
 
+                if _is_cancelled(app, job_id):
+                    raise asyncio.CancelledError()
                 to_url = common.generate_download_url(
                     self.host, container=f"{self.container}_segments", object_name=segment
                 )
@@ -175,8 +188,10 @@ class ObjectReplicationProxy:
         )
         return new_manifest
 
-    async def a_copy_object(self, object_name: str) -> None:
+    async def a_copy_object(self, object_name: str, job_id: str, app) -> None:
         """Copy an object from a location."""
+        if _is_cancelled(app, job_id):
+            raise asyncio.CancelledError()
         # Get the object stream handle
         async with self.client.get(
             common.generate_download_url(
@@ -216,6 +231,8 @@ class ObjectReplicationProxy:
                     raise aiohttp.web.HTTPUnprocessableEntity(
                         reason="ETag missing, maybe segments file empty"
                     )
+                if _is_cancelled(app, job_id):
+                    raise asyncio.CancelledError()
                 async with self.client.put(
                     common.generate_download_url(self.host, self.container, object_name),
                     data=resp_g.content.iter_chunked(65564),
@@ -235,13 +252,20 @@ class ObjectReplicationProxy:
                 # segmented upload
                 LOGGER.debug(f"Copying object {object_name} in segments.")
 
+                if _is_cancelled(app, job_id):
+                    raise asyncio.CancelledError()
                 manifest = await self.a_sync_object_segments(
-                    resp_g.headers["X-Object-Manifest"]
+                    resp_g.headers["X-Object-Manifest"],
+                    job_id=job_id,
+                    app=app,
                 )
 
                 LOGGER.debug("Uploading manifest")
                 # Add manifest headers
                 headers["X-Object-Manifest"] = manifest
+
+                if _is_cancelled(app, job_id):
+                    raise asyncio.CancelledError()
                 # Create manifest file
                 async with self.client.put(
                     common.generate_download_url(
@@ -262,44 +286,80 @@ class ObjectReplicationProxy:
         """Only copy a single object."""
         await self.a_copy_object(object_name)
 
-    async def a_get_container_page(self, marker: str = "") -> list[str]:
-        """Get a single page of objects from a container."""
-        async with self.client.get(
+    async def a_get_container_count(self) -> int:
+        """Get total object count in a container."""
+        async with self.client.head(
             common.generate_download_url(
-                self.source_host,
-                container=self.source_container,
+                self.source_host, container=self.source_container
             ),
             headers={"X-Auth-Token": self.token},
-            params={"marker": marker} if marker else None,
             timeout=ClientTimeout(total=REPL_TIMEOUT),
             ssl=ssl_context,
         ) as resp:
             if resp.status >= 400:
-                LOGGER.debug(f"Container fetch failed with status {resp.status}")
+                raise aiohttp.web.HTTPBadRequest(
+                    reason="Could not HEAD source container."
+                )
+
+            try:
+                return int(resp.headers.get("X-Container-Object-Count", "0"))
+            except ValueError:
+                return 0
+
+    async def a_get_container_page(
+        self, marker: str = "", limit: int = 10000
+    ) -> list[str]:
+        """Get one page of object names from a container."""
+        params = {"limit": str(limit)}
+        if marker:
+            params["marker"] = marker
+
+        async with self.client.get(
+            common.generate_download_url(
+                self.source_host, container=self.source_container
+            ),
+            headers={"X-Auth-Token": self.token},
+            params=params,
+            timeout=ClientTimeout(total=REPL_TIMEOUT),
+            ssl=ssl_context,
+        ) as resp:
+            if resp.status >= 400:
                 raise aiohttp.web.HTTPBadRequest(
                     reason="Could not fetch source container."
                 )
 
             if resp.status == 200:
-                ret = await resp.text()
-                return ret.rstrip().lstrip().split("\n")
+                text = await resp.text()
+                return [x for x in text.strip().split("\n") if x]
 
             return []
 
-    async def a_copy_from_container(self) -> None:
-        """Copy objects from a source container."""
+    async def a_copy_from_container(self, job_id: str, app) -> None:
+        """Copy objects from a source container with live progress + cancel."""
         LOGGER.debug(f"Fetching objects from container {self.source_container}")
-        container_url = common.generate_download_url(
-            self.source_host, container=self.source_container
-        )
-        LOGGER.debug(f"Container url: {container_url}")
 
-        # Page through all the objects in a container
-        to_copy: list[str] = []
-        page = await self.a_get_container_page()
-        while page:
-            to_copy = to_copy + page
-            page = await self.a_get_container_page(to_copy[-1])
+        job = app["replication_jobs"].get(job_id)
+        if job is not None:
+            job["total"] = await self.a_get_container_count()
+            job["done"] = 0
 
-        for obj in to_copy:
-            await self.a_copy_object(obj)
+        marker = ""
+
+        while True:
+            job = app["replication_jobs"].get(job_id)
+            if job is None or job.get("cancel"):
+                raise asyncio.CancelledError()
+
+            page = await self.a_get_container_page(marker=marker)
+            if not page:
+                break
+
+            for obj in page:
+                job = app["replication_jobs"].get(job_id)
+                if job is None or job.get("cancel"):
+                    raise asyncio.CancelledError()
+
+                await self.a_copy_object(obj, job_id=job_id, app=app)
+
+                job["done"] += 1
+            marker = page[-1]

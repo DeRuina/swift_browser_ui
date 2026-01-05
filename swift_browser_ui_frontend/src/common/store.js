@@ -5,6 +5,8 @@ import { isEqual, isEqualWith } from "lodash";
 import {
   getContainers,
   getObjects,
+  getCopyStatus,
+  cancelCopy,
 } from "@/common/api";
 import {
   getTagsForContainer,
@@ -22,6 +24,8 @@ import {
   getContainerLastmodified,
   updateContainerLastmodified,
 } from "@/common/globalFunctions";
+
+const pollers = {};
 
 const store = createStore({
   state: {
@@ -75,6 +79,7 @@ const store = createStore({
     sharingContainers: [],
     sharedContainers: [],
     downloadStartedToastVisible: false,
+    copyJobs: {},
 
   },
   mutations: {
@@ -250,6 +255,17 @@ const store = createStore({
     setSharedContainers(state, arr) {
       state.sharedContainers = arr || [];
     },
+    setCopyJob(state, job) {
+      state.copyJobs[job.jobId] = job;
+    },
+    updateCopyJob(state, { jobId, patch }) {
+      if (!state.copyJobs[jobId]) return;
+      state.copyJobs[jobId] = { ...state.copyJobs[jobId], ...patch };
+    },
+    removeCopyJob(state, jobId) {
+      delete state.copyJobs[jobId];
+    },
+
 
   },
   actions: {
@@ -631,6 +647,78 @@ const store = createStore({
         });
         await getDB().objects.bulkPut(newObjects);
       }
+    },
+    startCopyJob({ commit, dispatch }, { jobId, projectId, label }) {
+      commit("setCopyJob", {
+        jobId,
+        projectId,
+        label,
+        state: "running",
+        done: 0,
+        total: 0,
+        error: "",
+      });
+
+      // start polling
+      if (pollers[jobId]) clearInterval(pollers[jobId]);
+      pollers[jobId] = setInterval(() => {
+        dispatch("pollCopyJob", { jobId });
+      }, 1500);
+
+      dispatch("pollCopyJob", { jobId });
+    },
+    async pollCopyJob({ state, commit, dispatch }, { jobId }) {
+      const job = state.copyJobs[jobId];
+      if (!job) return;
+
+      try {
+        const s = await getCopyStatus(jobId, job.projectId);
+        commit("updateCopyJob", {
+          jobId,
+          patch: {
+            state: s.state,
+            done: s.done,
+            total: s.total,
+            error: s.error || "",
+          },
+        });
+
+        if (["finished", "failed", "cancelled"].includes(s.state)) {
+          dispatch("stopCopyJobPolling", { jobId });
+
+          if (s.state === "finished") {
+            dispatch("updateContainers", { projectID: job.projectId });
+          }
+        }
+      } catch (e) {
+        commit("updateCopyJob", {
+          jobId,
+          patch: { state: "failed", error: String(e?.message || e) },
+        });
+        dispatch("stopCopyJobPolling", { jobId });
+      }
+    },
+    stopCopyJobPolling(_, { jobId }) {
+      if (pollers[jobId]) {
+        clearInterval(pollers[jobId]);
+        delete pollers[jobId];
+      }
+    },
+    async cancelCopyJob({ state, commit, dispatch }, { jobId }) {
+      const job = state.copyJobs[jobId];
+      if (!job) return;
+      // stop polling
+      dispatch("stopCopyJobPolling", { jobId });
+      commit("removeCopyJob", jobId);
+      try {
+        await cancelCopy(jobId, job.projectId);
+      } finally {
+        dispatch("updateContainers", { projectID: job.projectId });
+      }
+    },
+    dismissCopyJob({ commit, dispatch }, { jobId }) {
+      dispatch("stopCopyJobPolling", { jobId });
+      commit("removeCopyJob", jobId);
     },
   },
 });

@@ -972,6 +972,87 @@ async def swift_replicate_container(
     )
 
 
+async def swift_replicate_status(request: aiohttp.web.Request) -> aiohttp.web.Response:
+    """Proxy replication status from upload-runner back to UI."""
+    session = await aiohttp_session.get_session(request)
+    request.app["Log"].info(
+        "API call for replication status from "
+        f"{request.remote}, sess: {session} :: {time.ctime()}"
+    )
+
+    project = request.query.get("project") or request.query.get("runner_project")
+    if not project:
+        raise aiohttp.web.HTTPBadRequest(reason="Missing ?project=<projectId>")
+
+    runner_id = await open_upload_runner_session(request, project=project)
+
+    job_id = request.match_info["job_id"]
+    path = f"/replicate/status/{job_id}"
+    signature = await sign(3600, path)
+
+    client = request.app["api_client"]
+    url = f"{setd['upload_internal_endpoint']}{path}"
+
+    async with client.get(
+        url,
+        cookies={"RUNNER_SESSION_ID": runner_id},
+        params=signature,
+        ssl=ssl_context,
+    ) as upstream:
+        body = await upstream.read()
+
+        # aiohttp.web.Response(content_type=...) cannot include charset
+        ctype = upstream.headers.get("Content-Type", "application/json")
+        if ";" in ctype:
+            ctype = ctype.split(";", 1)[0].strip()
+
+        return aiohttp.web.Response(
+            status=upstream.status,
+            body=body,
+            content_type=ctype,
+        )
+
+
+async def swift_replicate_cancel(request: aiohttp.web.Request) -> aiohttp.web.Response:
+    """Proxy replication cancel from UI to upload-runner."""
+    session = await aiohttp_session.get_session(request)
+    request.app["Log"].info(
+        "API call for replication cancel from "
+        f"{request.remote}, sess: {session} :: {time.ctime()}"
+    )
+
+    project = request.query.get("project") or request.query.get("runner_project")
+    if not project:
+        raise aiohttp.web.HTTPBadRequest(reason="Missing ?project=<projectId>")
+
+    runner_id = await open_upload_runner_session(request, project=project)
+
+    job_id = request.match_info["job_id"]
+    path = f"/replicate/cancel/{job_id}"
+    signature = await sign(3600, path)
+
+    client = request.app["api_client"]
+    url = f"{setd['upload_internal_endpoint']}{path}"
+
+    async with client.post(
+        url,
+        cookies={"RUNNER_SESSION_ID": runner_id},
+        params=signature,
+        ssl=ssl_context,
+    ) as upstream:
+        body = await upstream.read()
+
+        ctype = upstream.headers.get("Content-Type", "application/json")
+        if ";" in ctype:
+            ctype = ctype.split(";", 1)[0].strip()
+
+        return aiohttp.web.Response(
+            status=upstream.status,
+            body=body,
+            content_type=ctype,
+        )
+
+
 async def get_upload_session(
     request: aiohttp.web.Request,
 ) -> aiohttp.web.Response:

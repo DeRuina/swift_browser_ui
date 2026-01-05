@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import typing
+import uuid
 
 import aiohttp.web
 import msgpack
@@ -98,9 +99,33 @@ async def handle_replicate_container(
     await replicator.a_ensure_container()
     await replicator.a_ensure_container(segmented=True)
 
-    asyncio.ensure_future(replicator.a_copy_from_container())
+    job_id = uuid.uuid4().hex[:12]
 
-    return aiohttp.web.Response(status=202)
+    # create job record
+    request.app["replication_jobs"][job_id] = {
+        "state": "running",  # running | finished | failed | cancelled
+        "done": 0,
+        "total": 0,
+        "error": "",
+        "cancel": False,
+    }
+
+    async def runner():
+        try:
+            await replicator.a_copy_from_container(job_id=job_id, app=request.app)
+            request.app["replication_jobs"][job_id]["state"] = "finished"
+        except asyncio.CancelledError:
+            request.app["replication_jobs"][job_id]["state"] = "cancelled"
+            return
+        except Exception as e:
+            request.app["replication_jobs"][job_id]["state"] = "failed"
+            request.app["replication_jobs"][job_id]["error"] = str(e)
+            return
+
+    task = asyncio.create_task(runner())
+    request.app["replication_jobs"][job_id]["task"] = task
+
+    return aiohttp.web.json_response({"job_id": job_id}, status=202)
 
 
 async def handle_replicate_object(request: aiohttp.web.Request) -> aiohttp.web.Response:
@@ -136,6 +161,38 @@ async def handle_replicate_object(request: aiohttp.web.Request) -> aiohttp.web.R
     asyncio.ensure_future(replicator.a_copy_single_object(source_object))
 
     return aiohttp.web.Response(status=202)
+
+
+async def handle_replicate_status(request):
+    """Handle a request for getting replication job status."""
+    job_id = request.match_info["job_id"]
+    job = request.app["replication_jobs"].get(job_id)
+    if not job:
+        raise aiohttp.web.HTTPNotFound(reason="Job not found")
+
+    return aiohttp.web.json_response(
+        {
+            "state": job["state"],
+            "done": job["done"],
+            "total": job["total"],
+            "error": job.get("error", ""),
+        }
+    )
+
+
+async def handle_replicate_cancel(request):
+    """Handle a request for cancelling a replication job."""
+    job_id = request.match_info["job_id"]
+    job = request.app["replication_jobs"].get(job_id)
+    if not job:
+        raise aiohttp.web.HTTPNotFound(reason="Job not found")
+
+    job["cancel"] = True
+    task = job.get("task")
+    if task and not task.done():
+        task.cancel()
+
+    return aiohttp.web.json_response({"ok": True})
 
 
 async def handle_post_object_chunk(request: aiohttp.web.Request) -> aiohttp.web.Response:

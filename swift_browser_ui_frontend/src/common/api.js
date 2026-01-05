@@ -425,8 +425,25 @@ export async function swiftCopyContainer(
     throw new Error("Container replication not successful.");
   }
 
-  return ret;
+  return await ret.json();
 }
+
+export async function getCopyStatus(jobId, projectId) {
+  const url = new URL(`/replicate/status/${encodeURI(jobId)}`, document.location.origin);
+  url.searchParams.append("project", projectId);
+  const ret = await GET(url);
+  if (ret.status !== 200) throw new Error("Status fetch failed");
+  return ret.json();
+}
+
+export async function cancelCopy(jobId, projectId) {
+  const url = new URL(`/replicate/cancel/${encodeURI(jobId)}`, document.location.origin);
+  url.searchParams.append("project", projectId);
+  const ret = await POST(url);
+  if (ret.status !== 200) throw new Error("Cancel failed");
+  return ret.json();
+}
+
 
 export async function createExtToken(
   project,

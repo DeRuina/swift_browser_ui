@@ -41,7 +41,9 @@ from swift_browser_ui.ui.api import (
     swift_list_containers,
     swift_list_objects,
     swift_put_object,
+    swift_replicate_cancel,
     swift_replicate_container,
+    swift_replicate_status,
     swift_update_container_metadata,
 )
 from swift_browser_ui.ui.discover import handle_discover
@@ -305,6 +307,8 @@ async def servinit(
             aiohttp.web.post(
                 "/replicate/{project}/{container}", swift_replicate_container
             ),
+            aiohttp.web.get("/replicate/status/{job_id}", swift_replicate_status),
+            aiohttp.web.post("/replicate/cancel/{job_id}", swift_replicate_cancel),
         ]
     )
 

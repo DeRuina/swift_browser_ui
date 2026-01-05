@@ -19,6 +19,8 @@ from swift_browser_ui.upload.api import (
     handle_health_check,
     handle_post_object_chunk,
     handle_post_object_options,
+    handle_replicate_cancel,
+    handle_replicate_status,
     handle_upload_ws,
 )
 from swift_browser_ui.upload.auth import (
@@ -100,6 +102,17 @@ async def servinit() -> aiohttp.web.Application:
             aiohttp.web.options("/{project}/{container}", handle_post_object_options),
         ]
     )
+
+    # Add replication routes
+    app.add_routes(
+        [
+            aiohttp.web.get("/replicate/status/{job_id}", handle_replicate_status),
+            aiohttp.web.post("/replicate/cancel/{job_id}", handle_replicate_cancel),
+        ]
+    )
+
+    # Dictionary for tracking ongoing replication jobs
+    app["replication_jobs"] = {}
 
     return app
 

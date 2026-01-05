@@ -15,6 +15,8 @@ import ShareModal from "@/components/ShareModal.vue";
 import CopyFolderModal from "@/components/CopyFolderModal.vue";
 import DeleteModal from "@/components/DeleteModal.vue";
 import TokenModal from "@/components/TokenModal.vue";
+import CopyProgressToast from "@/components/CopyProgressToast.vue";
+
 
 // CSC UI things
 import { applyPolyfills, defineCustomElements } from "allas-ui/dist/loader";
@@ -94,6 +96,7 @@ const app = createApp({
     DeleteModal,
     TokenModal,
     DownloadStartedToast,
+    CopyProgressToast,
   },
   data: function () {
     return {
