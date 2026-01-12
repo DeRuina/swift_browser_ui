@@ -66,6 +66,13 @@ let default_translations = {
       createFolder: "Create folder",
       uploadSecondaryNav: "Upload",
       logOut: "Log out",
+      copyinprogress: "Copying in progress",
+      copyhelp: "Please wait for the copy to finish",
+      copycancelwarn: "If you cancel, the destination bucket may contain" +
+        " a partial copy. Already copied objects will remain.",
+      copycancel: "Copy cancelled",
+      copyfail: "Copy failed",
+      copysuccess: "Copy finished",
       folderTabs: {
         all: "All folders",
         sharedFrom: "Folders you have shared",
@@ -202,6 +209,7 @@ let default_translations = {
       containerFolder: "Folders",
       containerBucket: "Buckets",
       download: {
+        startedInBrowser: "Download started in your browser.",
         download: " Download",
         files: "Files can only be downloaded " +
           "individually because there are file or subfolder names longer " +
@@ -622,6 +630,13 @@ let default_translations = {
       createFolder: "Luo kansio",
       uploadSecondaryNav: "Lähetä",
       logOut: "Kirjaudu ulos",
+      copyinprogress: "Kopiointi käynnissä",
+      copyhelp: "Odota kopioinnin valmistumista",
+      copycancelwarn: "Jos peruutat, kohdekansio saattaa sisältää osittaisen kopion." +
+        "Jo kopioidut objektit jäävät paikalleen.",
+      copycancel: "Kopiointi peruutettu",
+      copyfail: "Kopiointi epäonnistui",
+      copysuccess: "Kopiointi valmis",
       folderTabs: {
         all: "Kaikki kansiot",
         sharedFrom: "Jakamasi kansiot",
@@ -761,6 +776,7 @@ let default_translations = {
       containerFolder: "Kansiot",
       containerBucket: "Ämpärit",
       download: {
+        startedInBrowser: "Lataus on alkanut selaimessasi.",
         download: " Lataa",
         files: "Tiedostot voidaan ladata vain " +
           "erikseen, koska tiedostojen tai alikansioiden nimet ovat " +

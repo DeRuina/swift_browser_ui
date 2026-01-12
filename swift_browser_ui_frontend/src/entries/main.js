@@ -15,6 +15,8 @@ import ShareModal from "@/components/ShareModal.vue";
 import CopyFolderModal from "@/components/CopyFolderModal.vue";
 import DeleteModal from "@/components/DeleteModal.vue";
 import TokenModal from "@/components/TokenModal.vue";
+import CopyProgressToast from "@/components/CopyProgressToast.vue";
+
 
 // CSC UI things
 import { applyPolyfills, defineCustomElements } from "allas-ui/dist/loader";
@@ -22,7 +24,7 @@ import { vControl } from "@/common/csc-ui-vue-directive";
 
 // Project JS functions
 import { i18n } from "@/common/i18n";
-import { getUser, signedFetch } from "@/common/api";
+import { getUser} from "@/common/api";
 import { getProjects } from "@/common/api";
 
 // Import SharingView and Request API
@@ -41,6 +43,8 @@ import "@/css/prod.scss";
 
 // Upload and direct download notification handler
 import ProgressNotification from "@/components/ProgressNotification.vue";
+import DownloadStartedToast from "@/components/DownloadStartedToast.vue";
+
 
 //Custom footer element
 import CFooter from "@/components/CFooter.vue";
@@ -91,6 +95,8 @@ const app = createApp({
     CopyFolderModal,
     DeleteModal,
     TokenModal,
+    DownloadStartedToast,
+    CopyProgressToast,
   },
   data: function () {
     return {
@@ -290,22 +296,6 @@ const app = createApp({
           ),
         );
       }
-      if (discovery.upload_endpoint) {
-        this.$store.commit(
-          "setUploadEndpoint",
-          discovery.upload_endpoint,
-        );
-
-        let key = await signedFetch(
-          "GET",
-          discovery.upload_endpoint,
-          `/cryptic/${this.active.name}/keys`,
-        );
-        key = await key.text();
-        key = `-----BEGIN CRYPT4GH PUBLIC KEY-----\n${key}\n-----END CRYPT4GH PUBLIC KEY-----\n`;
-        this.$store.commit("appendPubKey", key);
-      }
-
       this.initSocket().then(
         () => {if (DEV) console.log("Initialized the websocket.");},
       );

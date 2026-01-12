@@ -170,7 +170,6 @@
 
 <script>
 import {
-  GET,
   addAccessControlMeta,
   getSharedContainerAddress,
 } from "@/common/api";
@@ -445,42 +444,6 @@ export default {
         rights,
         this.tags,
       );
-
-      let signatureUrl = new URL("/sign/3600", document.location.origin);
-      signatureUrl.searchParams.append("path", `/cryptic/${this.$store.state.active.name}/${folder}`);
-      let signed = await GET(signatureUrl);
-      signed = await signed.json();
-
-      let whitelistUrl = new URL(this.$store.state.uploadEndpoint.concat(
-        `/cryptic/${this.$store.state.active.name}/${folder}`,
-      ));
-
-      whitelistUrl.searchParams.append(
-        "valid",
-        signed.valid,
-      );
-      whitelistUrl.searchParams.append(
-        "signature",
-        signed.signature,
-      );
-
-      let toShare = [];
-      for (const item of this.tags) {
-        toShare.push(
-          await this.$store.state.client.projectCheckIDs(item),
-        );
-      }
-
-      // Add access to cross-project sharing in case of read or read+write
-      if (this.read | this.write) {
-        await fetch(
-          whitelistUrl,
-          {
-            method: "PUT",
-            body: JSON.stringify(toShare),
-          },
-        );
-      }
 
       // signal to update sharing containers in container table
       this.$store.commit("setSharingUpdated", true);

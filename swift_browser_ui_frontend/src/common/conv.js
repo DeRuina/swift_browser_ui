@@ -2,7 +2,6 @@ import {
   getContainerMeta,
   getAccessControlMeta,
   getObjectsMeta,
-  GET,
 } from "@/common/api";
 import { DateTime } from "luxon";
 
@@ -24,15 +23,24 @@ function check_duplicate(container, share, currentdetails) {
 }
 
 function check_acl_mismatch(acl_cur, acl_sharing) {
-  // Check if the ACLs mismatch
-  if (
-    !("read" in acl_sharing && acl_cur.access.includes("r")) ||
-    !("write" in acl_sharing && acl_cur.access.includes("w"))
-  ) {
-    return true;
-  }
-  return false;
+  // Check if access detail entry has ACL mismatch
+  const dbAccess = acl_cur.access || [];
+  const dbHasRead = dbAccess.includes("r");
+  const dbHasWrite = dbAccess.includes("w");
+
+  const aclHasRead = !!acl_sharing.read;
+  const aclHasWrite = !!acl_sharing.write;
+
+  // read
+  const readMismatch = dbHasRead && !aclHasRead;
+
+  // write
+  const writeMismatch = dbHasWrite !== aclHasWrite;
+
+  return readMismatch || writeMismatch;
 }
+
+
 
 function check_stale(detail, access) {
   // Check if access detail entry has become stale
@@ -71,7 +79,8 @@ export async function syncContainerACLs(store) {
 
   // Refresh current sharing information
   let currentsharing = await client.getShare(project);
-  // Prune stale shared user access entries from the database
+
+    // Prune stale entries
   for (let container of currentsharing) {
     let containerDetails = await client.getShareDetails(project, container);
     for (let detail of containerDetails) {
@@ -81,8 +90,22 @@ export async function syncContainerACLs(store) {
     }
   }
 
-  // Refresh current sharing information
+  // Refresh again
   currentsharing = await client.getShare(project);
+
+  // Remove self-shares
+  for (let container of currentsharing) {
+    const details = await client.getShareDetails(project, container);
+
+    const hasSelfShare = details.some(
+      (detail) => detail.sharedTo === project,
+    );
+
+    if (hasSelfShare) {
+      await client.shareDeleteAccess(project, container, [project]);
+    }
+  }
+
   // Sync potential new shares into the sharing database
   for (let container of Object.keys(aclmeta)) {
     let currentdetails = [];
@@ -90,46 +113,16 @@ export async function syncContainerACLs(store) {
       currentdetails = await client.getShareDetails(project, container);
     }
     for (let share of Object.keys(aclmeta[container])) {
+      // skip self sharing
+      if (share === project) {
+        continue;
+      }
       if (check_duplicate(container, share, currentdetails)) {
         continue;
       }
       let accesslist = [];
       if (aclmeta[container][share].read) {
-        // Check if the shared access only concerns view rights
-        let tmpid = await client.projectCheckIDs(share);
-        let whitelisted = false;
-
-        if (tmpid !== undefined) {
-          let whitelistUrl = new URL(store.state.uploadEndpoint.concat(
-            `/check/${store.state.active.name}/${container}/${tmpid.name}`,
-          ));
-          let signatureUrl = new URL("/sign/3600", document.location.origin);
-          signatureUrl.searchParams.append(
-            "path",
-            `/check/${store.state.active.name}/${container}/${tmpid.name}`,
-          );
-          let signed = await GET(signatureUrl);
-          signed = await signed.json();
-          whitelistUrl.searchParams.append("valid", signed.valid);
-          whitelistUrl.searchParams.append("signature", signed.signature);
-
-          let whitelistedResp = await fetch(
-            whitelistUrl,
-            {
-              method: "GET",
-            },
-          );
-
-          if (whitelistedResp.status == 200) {
-            whitelisted = true;
-          }
-        }
-
-        if (whitelisted) {
-          accesslist.push("r");
-        } else {
-          accesslist.push("v");
-        }
+        accesslist.push("r");
       }
       if (aclmeta[container][share].write) {
         accesslist.push("w");

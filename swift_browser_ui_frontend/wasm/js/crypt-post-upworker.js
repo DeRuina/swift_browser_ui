@@ -30,34 +30,14 @@ let uploadCount = 0;
 let uploadCancelled = false;
 
 // Create an upload session
-function createUploadSession(container, receivers, projectName) {
-  // Add the receiver public key files to the filesystem'
-  // Use a temporary folder path unique enough to not cause a collision
-  let tmpdirpath = `${container}_receivers_`
-    + Math.random().toString(36)
-    + Math.random().toString(36);
-  FS.mkdir(tmpdirpath);
-  let files = [];
-  for (const receiver of receivers) {
-    files.push(`${tmpdirpath}/pubkey_${receivers.indexOf(receiver).toString()}`);
-    FS.writeFile(
-      `${tmpdirpath}/pubkey_${receivers.indexOf(receiver).toString()}`,
-      receiver,
-    );
-  }
+function createUploadSession(container, projectName) {
 
-  for (const file of files) {
-    FS.unlink(file);
-  }
-  FS.rmdir(tmpdirpath);
 
   // Store the upload session
   uploads[container] = {
     files: {},
     done_files: {},
     projectName: projectName,
-    receivers: null,
-    receiversLen: 0,
     owner: "",
     ownerName: "",
   };
@@ -138,7 +118,7 @@ class StreamSlicer{
           data: chunk,
         });
         this.iter++;
-        totalDone += chunk.length - 28;
+        totalDone += chunk.length;
       }
 
       let msg = msgpack.serialize({
@@ -162,10 +142,6 @@ class StreamSlicer{
     }
     if (!uploadCancelled) {
       uploadCount++;
-      postMessage({
-        eventType: "activeFile",
-        object: this.file.name,
-      });
       await this.sendChunks();
     }
   }
@@ -184,9 +160,7 @@ class StreamSlicer{
 
 // Safely free and remove an upload session
 function finishUploadSession(container) {
-  _free(uploads[container].receivers);
   delete uploads[container];
-  return;
 }
 
 
@@ -281,15 +255,10 @@ async function addFiles(files, container) {
 
     if (checkPollutingName(file.relativePath)) return;
 
+    const chunkSize = 65536;
     let path = `${file.relativePath}`;
-    let totalBytes = Math.floor(handle.size / 65536) * 65564;
-    let totalChunks = Math.floor(handle.size / 65536);
-
-    // Add the last block to total bytes and total chunks in case it exists
-    if (handle.size % 65536 > 0) {
-      totalBytes += handle.size % 65536 + 28;
-      totalChunks++;
-    }
+    let totalBytes  = handle.size;
+    let totalChunks = Math.ceil(handle.size / chunkSize);
 
     totalLeft += handle.size;
     totalFiles++;
@@ -382,7 +351,6 @@ self.addEventListener("message", (e) => {
       if (uploads[e.data.container] === undefined) {
         createUploadSession(
           e.data.container,
-          e.data.receivers,
           e.data.projectName,
         );
       }

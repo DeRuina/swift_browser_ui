@@ -1,6 +1,6 @@
 // Functions for handling interfacing between workers and upload API socket
 
-import { getUploadEndpoint, getUploadSocket, signedFetch } from "./api";
+import { getUploadSocket } from "./api";
 import { DEV } from "./conv";
 import { getDB } from "./db";
 import { timeout } from "./globalFunctions";
@@ -66,12 +66,6 @@ export default class UploadSocket {
         case "retryChunk":
           if (DEV) console.log("Retrying a chunk.");
           break;
-        case "activeFile":
-          this.$store.commit(
-            "setEncryptedFile",
-            e.data.object,
-          );
-          break;
         case "progress":
           this.$store.commit(
             "updateProgress",
@@ -96,43 +90,22 @@ export default class UploadSocket {
     };
     let handleDownWorker = (e) => {
       switch(e.data.eventType) {
-        case "getHeaders":
-          if (this.$store.state.downloadCount <= 0) {
-            this.$store.commit("eraseDownloadProgress");
-          }
-          this.$store.commit("addDownload");
-          this.getHeaders(
-            e.data.id,
-            e.data.container,
-            e.data.files,
-            e.data.pubkey,
-            e.data.owner,
-            e.data.ownerName,
-          ).then(() => {
-            if (this.useServiceWorker) {
-              this.$store.commit("removeDownload");
-              this.$store.commit("toggleDownloadNotification", false);
-            } else {
-              if (this.$store.state.downloadProgress === undefined) {
-                this.$store.commit("updateDownloadProgress", 0);
-              }
-            }
-            if (DEV) {
-              console.log(
-                `Got headers for download in container ${e.data.container}`,
-              );
-            }
-          }).catch(() =>  {
-            this.downWorker.postMessage({ command: "abort", reason: "error" });
-          });
-          break;
         case "downloadStarted":
+          if (this.useServiceWorker) {
+            this.$store.commit("toggleDownloadStartedToast", true);
+            setTimeout(() => {
+              this.$store.commit("toggleDownloadStartedToast", false);
+            }, 4000);
+          }
           if (DEV) {
             console.log(
               `Started downloading in container ${e.data.container}`,
             );
           }
           if (this.useServiceWorker) {
+            if (this.$store.state.downloadProgress === undefined) {
+              this.$store.commit("updateDownloadProgress", 0);
+            }
             this.downloadFinished = false;
             if (e.data.archive) {
               let downloadUrl = new URL(
@@ -164,24 +137,12 @@ export default class UploadSocket {
             });
           }
           break;
-        case "notDecryptable":
-          if (DEV) {
-            console.log(`Could not decrypt all files in container ${e.data.container}`);
-          }
-          document.querySelector("#decryption-toasts").addToast(
-            {
-              ...this.toastMessage,
-              type: "warning",
-              message: this.$t("message.notDecryptable"),
-            },
-          );
-          break;
         case "abort":
           this.$store.commit("setDownloadAbortReason", e.data.reason);
-          if (!this.useServiceWorker) {
-            this.$store.commit("removeDownload", true);
-            this.$store.commit("eraseDownloadProgress");
-          }
+          this.$store.commit("removeDownload", true);
+          this.$store.commit("eraseDownloadProgress");
+          this.$store.commit("toggleDownloadNotification", false);
+          if (this.useServiceWorker) this.downloadFinished = true;
           break;
         case "progress":
           this.$store.commit("updateDownloadProgress", e.data.progress);
@@ -195,18 +156,16 @@ export default class UploadSocket {
           if (!this.useServiceWorker) {
             if (this.$store.state.downloadCount === 1) {
               this.$store.commit("updateDownloadProgress", 1);
-              this.downWorker.postMessage({
-                command: "clear",
-              });
-              if (DEV) {
-                console.log("Clearing download progress interval");
-              }
+              this.downWorker.postMessage({ command: "clear" });
             }
-            this.$store.commit("removeDownload");
           }
           else {
             this.downloadFinished = true;
+            this.$store.commit("updateDownloadProgress", 1);
           }
+
+          this.$store.commit("removeDownload");
+
           break;
       }
     };
@@ -225,117 +184,6 @@ export default class UploadSocket {
     }
   }
 
-
-  // Get headers for download
-  async getHeaders(id, container, fileList, pubkey, owner, ownerName) {
-    let headers = {};
-
-    // Cache the container ID
-    let dbContainer = await getDB().containers
-      .get({
-        projectID: this.active.id,
-        name: container,
-      });
-
-    const dbContainerFileCount = await getDB().objects
-      .where({"containerID": dbContainer.id})
-      .count();
-
-    let dbContainerFiles = [];
-
-    while (dbContainerFiles.length < dbContainerFileCount
-      || dbContainerFiles.length < dbContainer.count) {
-      //check both: container.count not updated in obj view, and
-      //obj count might not be updated in time if there's many
-      dbContainerFiles = await getDB().objects
-        .where({"containerID": dbContainer.id})
-        .toArray();
-      await timeout(250);
-    }
-
-    // If files are specified, use only the specified file listing
-    if (fileList.length >= 1) {
-      dbContainerFiles = dbContainerFiles.filter(
-        item => fileList.includes(item.name),
-      );
-    }
-
-    let whitelistPath = `/cryptic/${this.active.name}/whitelist`;
-
-    let upInfo = await getUploadEndpoint(
-      this.active.id,
-      this.project,
-      container,
-    );
-
-    await signedFetch(
-      "PUT",
-      this.$store.state.uploadEndpoint,
-      whitelistPath,
-      pubkey,
-      {
-        flavor: "crypt4gh",
-        session: upInfo.id,
-      },
-    );
-
-    for (const file of dbContainerFiles) {
-      // Get the file header
-      let header = await signedFetch(
-        "GET",
-        this.$store.state.uploadEndpoint,
-        `/header/${this.active.name}/${container}/${file.name}`,
-        undefined,
-        {
-          session: upInfo.id,
-          owner: ownerName,
-        },
-      );
-      header = await header.text();
-
-      // Prepare the file URL
-      let fileUrl = new URL(
-        `/download/${owner ? owner : this.active.id}/${container}/${file.name}`,
-        document.location.origin,
-      );
-      fileUrl.searchParams.append("project", this.active.id);
-
-      headers[file.name] = {
-        header: Uint8Array.from(atob(header), c => c.charCodeAt(0)),
-        url: fileUrl.toString(),
-        size: file.bytes,
-      };
-    }
-
-    await signedFetch(
-      "DELETE",
-      this.$store.state.uploadEndpoint,
-      whitelistPath,
-      undefined,
-      {
-        session: upInfo.id,
-      },
-    );
-
-    if (!this.useServiceWorker) {
-      this.downWorker.postMessage({
-        command: "addHeaders",
-        id: id,
-        container: container,
-        headers: headers,
-      });
-    } else {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.active.postMessage({
-          command: "addHeaders",
-          id: id,
-          container: container,
-          headers: headers,
-        });
-      });
-    }
-  }
-
   // Get the latest upload endpoint
   async updateEndpoint() {
     let upinfo = await getUploadSocket(
@@ -345,6 +193,56 @@ export default class UploadSocket {
 
     return upinfo;
   }
+
+    async resolveDownloadObjects(container, objects, owner) {
+    // Find the container in IndexedDB
+    const dbContainer = await getDB().containers.get({
+      projectID: this.active.id,
+      name: container,
+    });
+    if (!dbContainer) {
+      throw new Error(`Container ${container} not found in IndexedDB`);
+    }
+
+    // Get all objects for that container
+    let dbObjects = await getDB().objects
+      .where({ containerID: dbContainer.id })
+      .toArray();
+
+    // Filter to the requested ones
+    if (objects && objects.length) {
+      dbObjects = dbObjects.filter(o => objects.includes(o.name));
+    }
+
+    return dbObjects;
+  }
+
+  // Build the proxy download URL
+  buildProxyUrl(container, objectName, owner) {
+    const projectParam = this.active.id;
+    const projectPath = owner || this.active.id;
+
+    const url = new URL(
+      `/download/${encodeURIComponent(projectPath)}/${encodeURIComponent(container)}/${encodeURIComponent(objectName)}`,
+      document.location.origin,
+    );
+    url.searchParams.set("project", projectParam);
+    return url.toString();
+  }
+
+  // Initialize download UI state
+  beginDownloadUI()  {
+    if (this.$store.state.downloadCount <= 0) {
+      this.$store.commit("eraseDownloadProgress");
+    }
+    this.$store.commit("addDownload");
+    if (this.$store.state.downloadProgress === undefined) {
+      this.$store.commit("updateDownloadProgress", 0);
+    }
+    this.$store.commit("toggleDownloadNotification", true);
+  }
+
+
 
   // Open the websocket for runner communication
   openSocket() {
@@ -363,15 +261,25 @@ export default class UploadSocket {
   }
 
   cancelDownload() {
-    this.downWorker.postMessage({ command: "abort", reason: "cancel" });
-    if (DEV) console.log("Cancel direct downloads");
+    // Direct worker downloads (Chrome/Edge etc.)
+    if (!this.useServiceWorker && this.downWorker) {
+      this.downWorker.postMessage({ command: "abort", reason: "cancel" });
+      if (DEV) console.log("Cancel direct downloads");
+    }
+    // ServiceWorker downloads (Firefox / Safari)
+    else if (this.useServiceWorker) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.active?.postMessage({ command: "abort", reason: "cancel" });
+        if (DEV) console.log("Cancel SW downloads");
+      });
+    }
   }
+
 
   // Schedule file/files for upload
   addUpload(
     container,
     files,
-    receivers,
     owner = "",
     ownerName = "",
   ) {
@@ -386,7 +294,6 @@ export default class UploadSocket {
     this.upWorker.postMessage({
       command: "addFiles",
       container: container,
-      receivers: receivers,
       projectName: this.active.name,
       owner: owner,
       ownerName: ownerName,
@@ -413,13 +320,17 @@ export default class UploadSocket {
       let ids = await this.$store.state.client.projectCheckIDs(owner);
       ownerName = ids.name;
     }
+
+    // Resolve selected object records (name, url, bytes) from IndexedDB
+    const dbObjects = await this.resolveDownloadObjects(container, objects, owner);
+
     let fileHandle = undefined;
     if (objects.length == 1) {
+      const obj = dbObjects[0];
+      const fileName = obj.name.replace(".c4gh", "");
       // Download directly into the file if available.
       // Otherwise, use streaming + ServiceWorker.
       if (!this.useServiceWorker) {
-        const fileName = objects[0].replace(".c4gh", "");
-
         if (test) {
           //OPFS root for direct download e2e testing
           const testDirHandle = await navigator.storage.getDirectory();
@@ -428,12 +339,8 @@ export default class UploadSocket {
         }
         else {
         // Match the file identifier
-          const fident = objects[0].replace(".c4gh", "")
-            .match(/(?<!^)\.[^.]{1,}$/g);
-          const opts = {
-            suggestedName: fileName,
-          };
-
+          const fident = fileName.match(/(?<!^)\.[^.]{1,}$/g);
+          const opts = { suggestedName: fileName };
           if (fident) {
             opts.types = [
               {
@@ -444,13 +351,22 @@ export default class UploadSocket {
               },
             ];
           }
-          fileHandle = await window.showSaveFilePicker(opts);
+          try {
+            fileHandle = await window.showSaveFilePicker(opts);
+          } catch (err) {
+            return;
+          }
+          this.beginDownloadUI();
         }
         this.downWorker.postMessage({
           command: "downloadFile",
           id: sessionId,
           container: container,
-          file: objects[0],
+          file: {
+            path: obj.name,
+            url:  this.buildProxyUrl(container, obj.name, owner),
+            size: obj.bytes,
+          },
           handle: fileHandle,
           owner: owner,
           ownerName: ownerName,
@@ -465,7 +381,11 @@ export default class UploadSocket {
             command: "downloadFile",
             id: sessionId,
             container: container,
-            file: objects[0],
+            file: {
+              path: obj.name,
+              url: this.buildProxyUrl(container, obj.name, owner),
+              size: obj.bytes,
+            },
             owner: owner,
             ownerName: ownerName,
           });
@@ -482,23 +402,31 @@ export default class UploadSocket {
           fileHandle =
             await testDirHandle.getFileHandle(fileName, { create: true });
         } else {
-          fileHandle = await window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [
-              {
-                description: "Tar archive (uncompressed)",
-                accept: {
-                  "application/x-tar": [".tar"],
+          try {
+            fileHandle = await window.showSaveFilePicker({
+              suggestedName: fileName,
+              types: [
+                {
+                  description: "Tar archive (uncompressed)",
+                  accept: {
+                    "application/x-tar": [".tar"],
+                  },
                 },
-              },
-            ],
-          });
+              ],
+            });} catch (err) {
+            return;
+          }
+          this.beginDownloadUI();
         }
         this.downWorker.postMessage({
           command: "downloadFiles",
           id: sessionId,
           container: container,
-          files: objects.length < 1 ? [] : objects,
+          files: dbObjects.map(obj => ({
+              path: obj.name,
+              url: this.buildProxyUrl(container, obj.name, owner),
+              size: obj.bytes,
+          })),
           handle: fileHandle,
           owner: owner,
           ownerName: ownerName,
@@ -510,7 +438,11 @@ export default class UploadSocket {
             command: "downloadFiles",
             id: sessionId,
             container: container,
-            files: objects.length < 1 ? [] : objects,
+            files: dbObjects.map(obj => ({
+              path: obj.name,
+              url: this.buildProxyUrl(container, obj.name, owner),
+              size: obj.bytes,
+            })),
             owner: owner,
             ownerName: ownerName,
           });

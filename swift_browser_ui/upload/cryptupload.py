@@ -14,7 +14,6 @@ import certifi
 import msgpack
 from aiohttp import ClientTimeout
 
-import swift_browser_ui.common.vault_client as vault_client
 import swift_browser_ui.upload.common as common
 
 ssl_context = ssl.create_default_context()
@@ -40,7 +39,6 @@ class FileUpload:
     def __init__(
         self,
         client: aiohttp.client.ClientSession,
-        vault: vault_client.VaultClient,
         session: typing.Dict[str, typing.Any],
         socket: aiohttp.web.WebSocketResponse,
         project: str,
@@ -54,7 +52,6 @@ class FileUpload:
         """."""
         self.session = session
         self.client = client
-        self.vault = vault
         self.socket = socket
 
         self.project = project
@@ -351,7 +348,6 @@ class UploadSession:
     ):
         """."""
         self.client: aiohttp.client.ClientSession = request.app["client"]
-        self.vault: vault_client.VaultClient = request.app[common.VAULT_CLIENT]
         self.project: str = request.match_info["project"]
         self.session = session
 
@@ -390,7 +386,6 @@ class UploadSession:
         # We can ignore typing for self.ws, as these functions are only called after messages
         self.uploads[container][path] = FileUpload(
             self.client,
-            self.vault,
             self.session,
             self.ws,  # type: ignore
             self.project,

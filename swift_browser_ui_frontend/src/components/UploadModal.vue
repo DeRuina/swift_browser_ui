@@ -142,7 +142,7 @@
           :sort-by="sortBy"
           :sort-direction="sortDirection"
           external-data
-          @click="checkPage($event,false)"
+          @click="checkPage($event)"
           @sort="onSort"
           @paginate="getDropTablePage"
         />
@@ -200,7 +200,6 @@
 import {
   getHumanReadableSize,
   truncate,
-  computeSHA256,
   sortItems,
 } from "@/common/conv";
 import { getDB } from "@/common/db";
@@ -217,9 +216,9 @@ import {
   keyboardNavigationInsideModal,
 } from "@/common/keyboardNavigation";
 import CUploadButton from "@/components/CUploadButton.vue";
-import { swiftDeleteObjects, getObjects, signedFetch, swiftCreateContainer, swiftCreateEmptyObject } from "@/common/api";
+import { swiftDeleteObjects, getObjects, swiftCreateContainer, swiftCreateEmptyObject } from "@/common/api";
 
-import { debounce, delay } from "lodash";
+import { debounce } from "lodash";
 import { mdiDelete } from "@mdi/js";
 
 export default {
@@ -233,15 +232,11 @@ export default {
   data() {
     return {
       inputFolder: "",
-      addRecvkey: "",
-      recvkeys: [],
-      recvHashedKeys: [],
       CUploadButton,
       projectInfoLink: "",
       addingFiles: false,
       buttonAddingFiles: false,
       interacted: false,
-      currentKeyPage: 1,
       errorMsg: "",
       toastMsg : "",
       containers: [],
@@ -273,9 +268,6 @@ export default {
     },
     locale() {
       return this.$i18n.locale;
-    },
-    pubkey() {
-      return this.$store.state.pubkey;
     },
     currentFolder() {
       return this.$route.params.container;
@@ -325,51 +317,6 @@ export default {
         },
       ];
     },
-    publickeyHeaders() {
-      return [
-        {
-          key: "key",
-          value: this.$t("message.encrypt.pubkeyLabel"),
-          width: "70%",
-          sortable: this.recvHashedKeys.length > 1,
-        },
-        {
-          key: "delete",
-          value: null,
-          sortable: false,
-          children: [
-            {
-              value: this.$t("message.delete"),
-              component: {
-                tag: "c-button",
-                params: {
-                  text: true,
-                  size: "small",
-                  title: this.$t("message.delete"),
-                  path: mdiDelete,
-                  onClick: ({ index }) =>{
-                    this.recvHashedKeys.splice(index, 1);
-                    this.recvkeys.splice(index, 1);
-                  },
-                  onKeyUp: (e) => {
-                    if(e.keyCode === 13) {
-                      // Get the text value of item that is to be removed
-                      const keyText = e.target.closest("tr")?.innerText;
-                      // Find its index in key list
-                      const index = this.recvHashedKeys.indexOf(keyText);
-                      if (index !== undefined) {
-                        this.recvHashedKeys.splice(index - 2, 1);
-                        this.recvkeys.splice(index - 2, 1);
-                      }
-                    }
-                  },
-                },
-              },
-            },
-          ],
-        },
-      ];
-    },
     dropFiles() {
       return this.$store.state.dropFiles;
     },
@@ -387,13 +334,6 @@ export default {
         });
         this.buttonAddingFiles = false;
       },
-    },
-    keyPagination() {
-      return {
-        itemCount: this.recvHashedKeys.length,
-        itemsPerPage: 5,
-        currentPage: this.currentKeyPage,
-      };
     },
     addFiles() {
       return this.$store.state.addUploadFiles;
@@ -417,7 +357,6 @@ export default {
         this.clearExistingFiles();
         this.objects = [];
         this.filesToOverwrite = [];
-        this.recvkeys = [];
         this.emptyFolders = [];
         this.inputFolder = "";
         this.containers = await getDB().containers
@@ -527,18 +466,14 @@ export default {
       }
     },
     getHumanReadableSize,
-    checkPage(event, isKey) {
+    checkPage(event) {
       const page = checkIfItemIsLastOnPage(
         {
           currentPage: event.target.pagination.currentPage ,
           itemsPerPage: event.target.pagination.itemsPerPage,
           itemCount: event.target.pagination.itemCount,
         });
-      if (isKey) {
-        this.currentKeyPage = page;
-      } else {
-        this.filesPagination.currentPage = page;
-      }
+      this.filesPagination.currentPage = page;
     },
     appendDropFiles(file, overwrite = false) {
       if (file?.size === 0) {
@@ -554,7 +489,7 @@ export default {
       ) {
         if (this.objects && !overwrite) {
           //Check if file already exists in container objects
-          const existingFile = this.objects.find(obj => obj.name === `${file.relativePath}.c4gh`);
+          const existingFile = this.objects.find(obj => obj.name === file.relativePath);
           if (existingFile) {
             this.existingFiles.push(file);
             return;
@@ -700,9 +635,11 @@ export default {
         }
 
         for (const f of this.filesToOverwrite) {
-          const seg = segmentObjs.find(obj => obj.name.includes(`${f.name}.c4gh/`));
+          const path = f.relativePath || f.name;
+          const seg = segmentObjs.find(obj => obj.name.startsWith(`${path}/`));
           if (seg) oldSegments.push(seg.name);
         }
+
       }
 
       if (oldSegments.length) {
@@ -811,24 +748,6 @@ export default {
       const el = document.querySelector(".dropArea");
       el.classList.remove("over-dropArea");
     },
-    validatePubkey(key) {
-      const sshed25519 = new RegExp (
-        "^ssh-ed25519 AAAAC3NzaC1lZDI1NTE5" +
-          "[0-9A-Za-z+/]{46,48}[=]{0,2}\\s[^\\s]+$");
-      const crypt4gh = new RegExp (
-        "^-----BEGIN CRYPT4GH PUBLIC KEY-----\\s[A-Za-z0-9+/]{42,44}[=]{0,2}" +
-          "\\s-----END CRYPT4GH PUBLIC KEY-----$");
-      return (key.trim().match(sshed25519) || key.trim().match(crypt4gh));
-    },
-    appendPublicKey: async function () {
-      this.addRecvkey = this.addRecvkey.trim();
-      if (!this.recvkeys.includes(this.addRecvkey)){
-        this.recvkeys.push(this.addRecvkey);
-        this.recvHashedKeys
-          .push({key: {value: await computeSHA256(this.addRecvkey)}});
-      }
-      this.addRecvkey = "";
-    },
     cancelUpload() {
       this.$store.commit("setFilesAdded", false);
       this.$store.commit("eraseDropFiles");
@@ -846,11 +765,8 @@ export default {
       }
       this.$store.commit("toggleUploadModal", false);
       this.addingFiles = false;
-      this.tags = [];
       this.files = [];
       this.interacted = false;
-      this.addRecvkey = "";
-      this.recvHashedKeys = [];
       this.errorMsg = "";
       this.toastMsg = "";
       this.sortBy = "name";
@@ -868,11 +784,6 @@ export default {
 
       if (!hasFiles && !hasEmptyFolders) {
         return this.$t("message.upload.addFiles");
-      }
-
-      // Keys are only required when uploading files
-      if (hasFiles && !this.pubkey.length && !this.recvkeys.length) {
-        return this.$t("message.upload.error");
       }
 
       return "";
@@ -956,47 +867,26 @@ export default {
         // Delete segments for files to be overwritten
         this.deleteSegments();
         if (hasEmptyFolders) await this.createEmptyFolders();
-        this.beginEncryptedUpload();
+        this.beginUpload();
       }
 
     },
-    async aBeginEncryptedUpload() {
-      // We need the proper IDs for the other project for Vault access
-      let owner = "";
-      let ownerName = "";
-      if (this.pubkey.length > 0 && !(this.$route.params.owner)) {
-        this.recvkeys = this.recvkeys.concat(this.pubkey);
-      } else if (this.$route.params.owner) {
-        let ids = await this.$store.state.client.projectCheckIDs(
-          this.$route.params.owner,
-        );
-        owner = ids.id;
-        ownerName = ids.name;
-      }
-
-      // Also need to get the other project's key from Vault
-      if (this.$route.params.owner) {
-        let sharedKey = await signedFetch(
-          "GET",
-          this.$store.state.uploadEndpoint,
-          `/cryptic/${ownerName}/keys`,
-        );
-        sharedKey = await sharedKey.text();
-        sharedKey = `-----BEGIN CRYPT4GH PUBLIC KEY-----\n${sharedKey}\n-----END CRYPT4GH PUBLIC KEY-----\n`;
-        this.recvkeys = this.recvkeys.concat([sharedKey]);
-      }
-
-      const folderName = this.currentFolder ?
-        this.currentFolder :
-        this.inputFolder;
+    async beginUpload() {
+      const folderName = this.currentFolder
+        ? this.currentFolder
+        : this.inputFolder;
 
       const rawPrefix = (this.$route.query.prefix || "").replace(/^\/+/, "");
-      const prefix    = rawPrefix && !rawPrefix.endsWith("/") ? `${rawPrefix}/` : rawPrefix;
+      const prefix = rawPrefix && !rawPrefix.endsWith("/") ? `${rawPrefix}/` : rawPrefix;
+
       const filesForUpload = this.$store.state.dropFiles.map(file => {
         const rp = file.relativePath || file.name;
         file.relativePath = `${prefix}${rp}`;
         return file;
       });
+
+      const owner = this.$route.params.owner || "";
+      const ownerName = "";
 
       this.$store.commit(
         "setUploadFolder",
@@ -1004,27 +894,17 @@ export default {
       );
       this.$store.commit("setNewFolder", folderName);
 
+      // Adjust this to your websocket client signature.
+      // If it used to be addUpload(folder, files, keys, owner, ownerName),
+      // just pass [] for keys now.
       this.socket.addUpload(
         folderName,
         filesForUpload,
-        this.recvkeys.map(item => item),
         owner,
         ownerName,
       );
-    },
-    beginEncryptedUpload() {
-      this.aBeginEncryptedUpload().then(() => {
-        delay(() => {
-          if (this.$store.state.encryptedFile == ""
-            && this.dropFiles.length) {
-            //upload didn't start
-            this.uploadError = this.$t("message.upload.error");
-            this.$store.commit("stopUploading", true);
-            this.$store.commit("toggleUploadNotification", false);
-          }
-        }, 1000);
-        this.toggleUploadModal();
-      });
+
+      this.toggleUploadModal();
     },
     handleKeyDown: function (e) {
       const focusableList = this.$refs.uploadContainer.querySelectorAll(

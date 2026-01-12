@@ -425,8 +425,25 @@ export async function swiftCopyContainer(
     throw new Error("Container replication not successful.");
   }
 
-  return ret;
+  return await ret.json();
 }
+
+export async function getCopyStatus(jobId, projectId) {
+  const url = new URL(`/replicate/status/${encodeURI(jobId)}`, document.location.origin);
+  url.searchParams.append("project", projectId);
+  const ret = await GET(url);
+  if (ret.status !== 200) throw new Error("Status fetch failed");
+  return ret.json();
+}
+
+export async function cancelCopy(jobId, projectId) {
+  const url = new URL(`/replicate/cancel/${encodeURI(jobId)}`, document.location.origin);
+  url.searchParams.append("project", projectId);
+  const ret = await POST(url);
+  if (ret.status !== 200) throw new Error("Cancel failed");
+  return ret.json();
+}
+
 
 export async function createExtToken(
   project,
@@ -537,66 +554,6 @@ export async function getUploadSocket(
   return ret.json();
 }
 
-export async function getUploadCryptedEndpoint(
-  project,
-  owner,
-  container,
-  object,
-) {
-  // Fetch upload endpoint information for encrypted upload
-  let fetchURL = new URL("/enupload/".concat(
-    encodeURI(owner),
-    "/",
-    encodeURI(container),
-    "/",
-    encodeURI(object),
-  ),
-  document.location.origin,
-  );
-  fetchURL.searchParams.append("project", project);
-  let ret = await GET(fetchURL);
-
-  if (ret.status != 200) {
-    throw new Error("Failed to get upload session information.");
-  }
-
-  return ret.json();
-}
-
-
-// Convenience function for performing a signed fetch
-export async function signedFetch(
-  method,
-  base,
-  path,
-  body,
-  params,
-  lifetime = 60,
-) {
-  let signatureUrl = new URL(`/sign/${lifetime}`, document.location.origin);
-  signatureUrl.searchParams.append("path", path);
-  let signed = await GET(signatureUrl);
-  signed = await signed.json();
-
-  let fetchUrl = new URL(base.concat(path));
-  fetchUrl.searchParams.append("valid", signed.valid);
-  fetchUrl.searchParams.append("signature", signed.signature);
-  if (params !== undefined) {
-    for (const param in params) {
-      fetchUrl.searchParams.append(param, params[param]);
-    }
-  }
-
-  let resp = await fetch(
-    fetchUrl,
-    {
-      method,
-      body,
-    },
-  );
-
-  return resp;
-}
 
 // Create an empty “folder” marker (zero-byte object ending with “/”).
 export async function swiftCreateEmptyObject(project, container, objectPath, owner) {
